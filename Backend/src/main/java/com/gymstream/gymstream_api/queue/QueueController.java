@@ -54,15 +54,23 @@ public class QueueController {
     }
 
     @PatchMapping("/next-track/{roomId}")
-    public ResponseEntity<QueueItemDTO> nextTrack(@PathVariable Long roomId) {
+    public ResponseEntity<QueueItemDTO> nextTrack(
+            @PathVariable Long roomId,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        AppUser user = userService.getUserBySessionToken(sessionToken);
+        queueService.validateOwner(roomId, user);
         QueueItemDTO next = queueService.nextTrack(roomId);
         notifyQueue(roomId);
         return ResponseEntity.ok(next);
     }
 
     @DeleteMapping("/{queueItemId}")
-    public ResponseEntity<Void> deleteQueueItem(@PathVariable Long queueItemId) {
+    public ResponseEntity<Void> deleteQueueItem(
+            @PathVariable Long queueItemId,
+            @RequestHeader("X-Session-Token") String sessionToken) {
+        AppUser user = userService.getUserBySessionToken(sessionToken);
         Long roomId = queueService.deleteQueueItem(queueItemId);
+        queueService.validateOwner(roomId, user);
         notifyQueue(roomId);
         return ResponseEntity.noContent().build();
     }

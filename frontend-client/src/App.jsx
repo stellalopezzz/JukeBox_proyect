@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
-import { apiLogin, apiRegister, apiCreateRoom } from './api/api'
+import { apiLogin, apiRegister, apiCreateRoom, apiMe, apiLogout } from './api/api'
 
 const STORAGE_KEYS = {
   roomCode: 'jukebox_roomCode',
@@ -10,6 +10,8 @@ const STORAGE_KEYS = {
   votedSongs: 'jukebox_votedSongs',
   authUser: 'jukebox_authUser',
   userId: 'jukebox_userId',
+  ownedRooms: 'jukebox_ownedRooms',
+  joinedRoom: 'jukebox_joinedRoom',
 }
 
 const SERVER_BASE = 'http://localhost:8080/api'
@@ -64,6 +66,7 @@ function App() {
   const [showJoinRoomModal, setShowJoinRoomModal] = useState(false)
   const [joinRoomCode, setJoinRoomCode] = useState('')
   const [joiningRoom, setJoiningRoom] = useState(false)
+  const [ownedRooms, setOwnedRooms] = useState([])
   const socketRef = useRef(null)
 
   useEffect(() => {
@@ -72,8 +75,13 @@ function App() {
     const storedUser = localStorage.getItem(STORAGE_KEYS.username)
     const storedToken = localStorage.getItem(STORAGE_KEYS.sessionToken)
     const storedAuthUser = localStorage.getItem(STORAGE_KEYS.authUser)
+    const storedOwnedRooms = localStorage.getItem(STORAGE_KEYS.ownedRooms)
 
     setVotedSongs(readStoredVotes())
+
+    if (storedOwnedRooms) {
+      try { setOwnedRooms(JSON.parse(storedOwnedRooms)) } catch {}
+    }
 
     if (storedAuthUser) {
       setUsername(storedAuthUser)
@@ -87,6 +95,18 @@ function App() {
       setAuthStage('home')
       setStage('dashboard')
       setStatusMessage(`Sesion cargada para ${storedUser}`)
+    } else if (storedToken && storedAuthUser) {
+      apiMe(storedToken)
+        .then((me) => {
+          if (me.ownedRooms && me.ownedRooms.length > 0) {
+            setOwnedRooms(me.ownedRooms)
+            localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
+          }
+          if (me.joinedRoom) {
+            localStorage.setItem(STORAGE_KEYS.joinedRoom, JSON.stringify(me.joinedRoom))
+          }
+        })
+        .catch(() => {})
     }
   }, [])
 
@@ -160,6 +180,18 @@ function App() {
       setAuthStage('home')
       setStatusMessage(`Bienvenido ${data.username}`)
       setPassword('')
+
+      const me = await apiMe(data.token)
+      if (me.ownedRooms && me.ownedRooms.length > 0) {
+        setOwnedRooms(me.ownedRooms)
+        localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
+      } else {
+        setOwnedRooms([])
+        localStorage.removeItem(STORAGE_KEYS.ownedRooms)
+      }
+      if (me.joinedRoom) {
+        localStorage.setItem(STORAGE_KEYS.joinedRoom, JSON.stringify(me.joinedRoom))
+      }
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo iniciar sesion.')
     }
@@ -182,6 +214,18 @@ function App() {
       setAuthStage('home')
       setStatusMessage(`Registro exitoso. Bienvenido ${data.username}`)
       setPassword('')
+
+      const me = await apiMe(data.token)
+      if (me.ownedRooms && me.ownedRooms.length > 0) {
+        setOwnedRooms(me.ownedRooms)
+        localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
+      } else {
+        setOwnedRooms([])
+        localStorage.removeItem(STORAGE_KEYS.ownedRooms)
+      }
+      if (me.joinedRoom) {
+        localStorage.setItem(STORAGE_KEYS.joinedRoom, JSON.stringify(me.joinedRoom))
+      }
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo registrar.')
     }
@@ -281,6 +325,7 @@ function App() {
 
   function clearSession() {
     Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+    setOwnedRooms([])
     setAuthStage('login')
     setAuthMode('signin')
     setStage('login')
@@ -298,14 +343,28 @@ function App() {
     socketRef.current = null
   }
 
-  function handleLogout() {
-    localStorage.removeItem(STORAGE_KEYS.authUser)
-    localStorage.removeItem(STORAGE_KEYS.sessionToken)
-    localStorage.removeItem(STORAGE_KEYS.userId)
+  async function handleLogout() {
+    const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
+    if (token) {
+      try { await apiLogout(token) } catch {}
+    }
+    socketRef.current?.disconnect()
+    socketRef.current = null
+    Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+    setOwnedRooms([])
     setAuthStage('login')
     setAuthMode('signin')
+    setStage('login')
+    setRoomCode('')
+    setRoomDbId('')
     setUsername('')
     setPassword('')
+    setQueue([])
+    setVotedSongs({})
+    setShowCreateRoomModal(false)
+    setRoomName('')
+    setShowJoinRoomModal(false)
+    setJoinRoomCode('')
     setStatusMessage('Sesion cerrada')
   }
 
@@ -319,6 +378,15 @@ function App() {
     setRoomName('')
     setShowCreateRoomModal(true)
     setStatusMessage('')
+  }
+
+  function handleEnterAsHost(room) {
+    localStorage.setItem(STORAGE_KEYS.roomCode, room.code)
+    localStorage.setItem(STORAGE_KEYS.roomDbId, String(room.id))
+    setRoomCode(room.code)
+    setRoomDbId(String(room.id))
+    setStage('dashboard')
+    setStatusMessage(`Entrando como Host a ${room.name || room.code}`)
   }
 
   async function handleConfirmCreateRoom() {
@@ -490,6 +558,26 @@ function App() {
                 </button>
               </div>
             </section>
+
+            {ownedRooms.length > 0 && (
+              <section>
+                <h3 className="mb-3 text-sm uppercase tracking-[0.24em] text-emerald-400/80">Tus salas como Host</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {ownedRooms.map((room) => (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => handleEnterAsHost(room)}
+                      className="rounded-3xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-left shadow-xl shadow-emerald-500/10 transition hover:border-emerald-400/60 hover:-translate-y-0.5"
+                    >
+                      <p className="text-lg font-semibold text-white">{room.name || room.code}</p>
+                      <p className="mt-1 text-sm text-emerald-300/70">Codigo: {room.code}</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.16em] text-emerald-400">Entrar como Host</p>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="grid gap-6 sm:grid-cols-2">
               <button

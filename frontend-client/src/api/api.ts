@@ -41,3 +41,25 @@ export async function apiCreateRoom(name: string, sessionToken: string) {
   }
   return res.json();
 }
+
+export async function apiMe(sessionToken: string) {
+  const res = await fetch(`${API_URL}/users/me`, {
+    headers: { "X-Session-Token": sessionToken },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message || "Error al obtener sesion");
+  }
+  return res.json();
+}
+
+export async function apiLogout(sessionToken: string) {
+  const res = await fetch(`${API_URL}/users/logout`, {
+    method: "POST",
+    headers: { "X-Session-Token": sessionToken },
+  });
+  if (!res.ok) {
+    return { success: false };
+  }
+  return res.json();
+}

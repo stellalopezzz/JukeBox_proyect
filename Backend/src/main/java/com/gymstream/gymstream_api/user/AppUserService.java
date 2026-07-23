@@ -1,22 +1,28 @@
 package com.gymstream.gymstream_api.user;
 
 import com.gymstream.gymstream_api.room.Room;
+import com.gymstream.gymstream_api.room.RoomRepository;
 import com.gymstream.gymstream_api.room.RoomService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.UUID;
 import java.util.Optional;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AppUserService {
 
     private final AppUserRepository userRepository;
     private final RoomService roomService;
+    private final RoomRepository roomRepository;
 
-    public AppUserService(AppUserRepository appUserRepository, RoomService roomService) {
+    public AppUserService(AppUserRepository appUserRepository, RoomService roomService, RoomRepository roomRepository) {
         this.userRepository = appUserRepository;
         this.roomService = roomService;
+        this.roomRepository = roomRepository;
     }
 
    
@@ -118,5 +124,39 @@ public class AppUserService {
         return userRepository.findBySessionToken(sessionToken.trim())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "Token de sesion invalido"));
+    }
+
+    public Map<String, Object> getMe(String sessionToken) {
+        AppUser user = getUserBySessionToken(sessionToken);
+
+        Map<String, Object> joinedRoom = null;
+        if (user.getRoom() != null) {
+            joinedRoom = Map.of(
+                    "id", user.getRoom().getId(),
+                    "code", user.getRoom().getCode()
+            );
+        }
+
+        List<Map<String, Object>> ownedRooms = roomRepository.findByOwnerId(user.getId())
+                .stream()
+                .map(room -> Map.<String, Object>of(
+                        "id", room.getId(),
+                        "code", room.getCode(),
+                        "name", room.getName() != null ? room.getName() : ""
+                ))
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "userId", user.getId(),
+                "username", user.getUsername(),
+                "joinedRoom", joinedRoom,
+                "ownedRooms", ownedRooms
+        );
+    }
+
+    public void logout(String sessionToken) {
+        AppUser user = getUserBySessionToken(sessionToken);
+        user.setSessionToken(null);
+        userRepository.save(user);
     }
 }

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/rooms")
+@RequestMapping("/api")
 public class AppUserController {
 
     private final AppUserService userService;
@@ -16,7 +16,7 @@ public class AppUserController {
         this.userService = userService;
     }
 
-    @PostMapping("/login")
+    @PostMapping("/rooms/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
         AppUser user = userService.login(request.username(), request.password());
 
@@ -27,7 +27,7 @@ public class AppUserController {
         ));
     }
 
-    @PostMapping("/register")
+    @PostMapping("/rooms/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
         AppUser user = userService.register(request.username(), request.password());
 
@@ -38,7 +38,7 @@ public class AppUserController {
         ));
     }
 
-    @PostMapping("/join")
+    @PostMapping("/rooms/join")
     public ResponseEntity<Map<String, Object>> joinRoom(@Valid @RequestBody JoinRoomRequest request) {
         AppUser user = userService.joinRoom(request.code(), request.username());
 
@@ -48,5 +48,17 @@ public class AppUserController {
                 "roomId", user.getRoom().getId(),
                 "roomCode", user.getRoom().getCode()
         ));
+    }
+
+    @GetMapping("/users/me")
+    public ResponseEntity<Map<String, Object>> me(@RequestHeader("X-Session-Token") String sessionToken) {
+        Map<String, Object> result = userService.getMe(sessionToken);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/users/logout")
+    public ResponseEntity<Map<String, Object>> logout(@RequestHeader("X-Session-Token") String sessionToken) {
+        userService.logout(sessionToken);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 }

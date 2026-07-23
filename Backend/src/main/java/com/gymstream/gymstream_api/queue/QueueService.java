@@ -271,4 +271,14 @@ public class QueueService {
                     HttpStatus.FORBIDDEN, "El usuario no pertenece a esta sala");
         }
     }
+
+    public void validateOwner(Long roomId, AppUser user) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Sala no encontrada"));
+        if (room.getOwner() == null || !room.getOwner().getId().equals(user.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Solo el owner de la sala puede realizar esta accion");
+        }
+    }
 }
