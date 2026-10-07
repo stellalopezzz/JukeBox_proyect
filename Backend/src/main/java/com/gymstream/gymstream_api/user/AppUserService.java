@@ -4,6 +4,7 @@ import com.gymstream.gymstream_api.room.Room;
 import com.gymstream.gymstream_api.room.RoomRepository;
 import com.gymstream.gymstream_api.room.RoomService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.UUID;
@@ -18,11 +19,14 @@ public class AppUserService {
     private final AppUserRepository userRepository;
     private final RoomService roomService;
     private final RoomRepository roomRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public AppUserService(AppUserRepository appUserRepository, RoomService roomService, RoomRepository roomRepository) {
+    public AppUserService(AppUserRepository appUserRepository, RoomService roomService,
+                          RoomRepository roomRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = appUserRepository;
         this.roomService = roomService;
         this.roomRepository = roomRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
    
@@ -39,7 +43,8 @@ public class AppUserService {
         AppUser user = userOpt.orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
 
-        if (!user.getPassword().equals(password)) { // MVP sin hash
+        // matches() lee el salt guardado dentro del hash y repite el cálculo con él
+        if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas");
         }
 
@@ -69,7 +74,7 @@ public class AppUserService {
 
         AppUser user = new AppUser();
         user.setUsername(trimmedUsername);
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(password));
         user.setSessionToken(UUID.randomUUID().toString());
         return userRepository.save(user);
     }

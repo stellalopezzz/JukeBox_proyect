@@ -104,7 +104,7 @@ Bajo `Backend/src/main/java/com/gymstream/gymstream_api/`, cada paquete es un fe
 
 ### Autenticación (sin Spring Security)
 
-Es un esquema de token de sesión manual: `AppUser.sessionToken` (UUID) se genera en login/register/joinRoom y el cliente lo reenvía en el header `X-Session-Token`. Cada controller que lo necesita lo resuelve a mano llamando a `AppUserService.getUserBySessionToken()`. Las contraseñas se guardan **en texto plano** (`AppUserService.login`, comentario "MVP sin hash") — es un problema conocido pendiente, ver PROJECT_STATUS.md.
+Es un esquema de token de sesión manual: `AppUser.sessionToken` (UUID) se genera en login/register/joinRoom y el cliente lo reenvía en el header `X-Session-Token`. Cada controller que lo necesita lo resuelve a mano llamando a `AppUserService.getUserBySessionToken()`. Las contraseñas se guardan hasheadas con BCrypt: `AppUserService` usa el bean `PasswordEncoder` definido en `config/PasswordConfig.java` (`encode` al registrar, `matches` al hacer login). Solo se usa la dependencia `spring-security-crypto`, no el starter de Spring Security. Los usuarios creados antes de este cambio, con contraseña en texto plano, ya no pueden loguearse y deben registrarse de nuevo.
 
 ### Modelo de dominio
 
