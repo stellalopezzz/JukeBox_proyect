@@ -41,7 +41,6 @@ El proyecto tiene un MVP funcional.
 
 ## Problemas conocidos
 
-- Las contraseñas todavía necesitan hashing.
 - La autenticación/sesiones necesitan mejoras.
 - La validación del usuario Host necesita revisarse.
 - El manejo global de excepciones puede mejorarse.

@@ -25,9 +25,9 @@ public class AppUser {
     @Column(nullable = false, length = 50, unique = true)
     private String username;
 
-    // Password, obligatorio y maximo de 15 caracteres
+    // Hash BCrypt del password (~60 caracteres), nunca el texto original.
+    // La regla de 4 a 15 caracteres vive en RegisterRequest/LoginRequest, que validan lo que escribe el usuario.
     @NotBlank(message = "La contraseña no puede estar vacía")
-    @Size(min = 4, max = 15)
     @Column(nullable = false)
     private String password;
 
