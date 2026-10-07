@@ -1,49 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { apiLogin, apiRegister, apiCreateRoom, apiMe, apiLogout } from './api/api'
-
-const STORAGE_KEYS = {
-  roomCode: 'jukebox_roomCode',
-  roomDbId: 'jukebox_roomDbId',
-  username: 'jukebox_username',
-  sessionToken: 'jukebox_sessionToken',
-  votedSongs: 'jukebox_votedSongs',
-  authUser: 'jukebox_authUser',
-  userId: 'jukebox_userId',
-  ownedRooms: 'jukebox_ownedRooms',
-  joinedRoom: 'jukebox_joinedRoom',
-}
+import { SOCKET_URL } from './shared/config'
+import { normalizeQueueItem, thumbUrl } from './shared/queueItem'
+import { STORAGE_KEYS, clearStoredSession, readStoredVotes } from './shared/storage'
 
 const SERVER_BASE = 'http://localhost:8080/api'
-const SOCKET_URL = 'http://localhost:3000'
-
-function normalizeQueueItem(raw) {
-  return {
-    ...raw,
-    id: raw.id,
-    songTitle: raw.songTitle ?? raw.title ?? 'Sin titulo',
-    songArtist: raw.songArtist ?? raw.artist ?? 'Artista desconocido',
-    songYtId: raw.songYtId ?? raw.ytId ?? '',
-    songThumb: raw.songThumb ?? raw.thumbnail ?? '',
-    votesCount: raw.votesCount ?? raw.votes ?? 0,
-    score: raw.score ?? 0,
-    status: raw.status,
-  }
-}
-
-function thumbUrl(item) {
-  if (item.songThumb) return item.songThumb
-  if (item.songYtId) return `https://img.youtube.com/vi/${item.songYtId}/hqdefault.jpg`
-  return 'https://via.placeholder.com/100x60?text=Cover'
-}
-
-function readStoredVotes() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.votedSongs) || '{}')
-  } catch {
-    return {}
-  }
-}
 
 function App() {
   const [authStage, setAuthStage] = useState('login') // "login" | "home"
@@ -324,7 +286,7 @@ function App() {
   }
 
   function clearSession() {
-    Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+    clearStoredSession()
     setOwnedRooms([])
     setAuthStage('login')
     setAuthMode('signin')
@@ -350,7 +312,7 @@ function App() {
     }
     socketRef.current?.disconnect()
     socketRef.current = null
-    Object.values(STORAGE_KEYS).forEach((key) => localStorage.removeItem(key))
+    clearStoredSession()
     setOwnedRooms([])
     setAuthStage('login')
     setAuthMode('signin')
