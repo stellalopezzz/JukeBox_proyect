@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
-import { apiLogin, apiRegister, apiCreateRoom, apiMe, apiLogout } from './api/api'
+import {
+  apiAddToQueue,
+  apiCreateRoom,
+  apiGetQueue,
+  apiJoinRoom,
+  apiLogin,
+  apiLogout,
+  apiMe,
+  apiRegister,
+  apiSearchSongs,
+  apiToggleVote,
+} from './api/api'
 import { SOCKET_URL } from './shared/config'
 import { normalizeQueueItem, thumbUrl } from './shared/queueItem'
 import { STORAGE_KEYS, clearStoredSession, readStoredVotes } from './shared/storage'
-
-const SERVER_BASE = 'http://localhost:8080/api'
 
 function App() {
   const [authStage, setAuthStage] = useState('login') // "login" | "home"
@@ -115,10 +124,8 @@ function App() {
 
   async function fetchQueue() {
     try {
-      const response = await fetch(`${SERVER_BASE}/queue/${roomDbId}`)
-      if (!response.ok) return
-      const data = await response.json()
-      const list = Array.isArray(data) ? data : data?.queue || []
+      const list = await apiGetQueue(roomDbId)
+      if (!list) return
       setQueue(list.map(normalizeQueueItem))
     } catch {
       setStatusMessage('No se pudo cargar la cola.')
@@ -202,10 +209,7 @@ function App() {
     setStatusMessage('Buscando canciones...')
 
     try {
-      const response = await fetch(`${SERVER_BASE}/songs/search?q=${encodeURIComponent(query)}`)
-      if (!response.ok) throw new Error('Error en la busqueda')
-      const data = await response.json()
-      const results = Array.isArray(data) ? data : data?.results || []
+      const results = await apiSearchSongs(query)
       setSearchResults(results)
       setStatusMessage(`${results.length} resultados encontrados`)
     } catch {
@@ -225,26 +229,13 @@ function App() {
     setStatusMessage('Agregando cancion...')
 
     try {
-      const response = await fetch(`${SERVER_BASE}/queue/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Session-Token': token,
-        },
-        body: JSON.stringify({
-          roomId: Number(roomDbId),
-          ytId: song.ytId,
-          title: song.title,
-          artist: song.artist,
-          thumb: song.thumbnail,
-        }),
+      await apiAddToQueue(token, {
+        roomId: Number(roomDbId),
+        ytId: song.ytId,
+        title: song.title,
+        artist: song.artist,
+        thumb: song.thumbnail,
       })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => null)
-        throw new Error(error?.message || 'No se pudo agregar la cancion')
-      }
-
       await fetchQueue()
       setStatusMessage('Cancion enviada a la cola.')
     } catch (error) {
@@ -259,17 +250,7 @@ function App() {
     const idKey = String(queueItemId)
 
     try {
-      const response = await fetch(`${SERVER_BASE}/votes/${queueItemId}`, {
-        method: alreadyVoted ? 'DELETE' : 'POST',
-        headers: { 'X-Session-Token': token },
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => null)
-        setStatusMessage(error?.message || 'No se pudo actualizar el voto.')
-        return
-      }
-
+      await apiToggleVote(token, queueItemId, alreadyVoted)
       const nextVotes = { ...votedSongs }
       if (alreadyVoted) {
         delete nextVotes[idKey]
@@ -280,8 +261,8 @@ function App() {
       localStorage.setItem(STORAGE_KEYS.votedSongs, JSON.stringify(nextVotes))
       await fetchQueue()
       setStatusMessage(alreadyVoted ? 'Voto quitado.' : 'Voto registrado.')
-    } catch {
-      setStatusMessage('No se pudo actualizar el voto.')
+    } catch (error) {
+      setStatusMessage(error.message || 'No se pudo actualizar el voto.')
     }
   }
 
@@ -396,13 +377,7 @@ function App() {
     }
     setJoiningRoom(true)
     try {
-      const response = await fetch(`${SERVER_BASE}/rooms/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmed, username: currentUser }),
-      })
-      if (!response.ok) throw new Error('No se pudo unir a la sala')
-      const data = await response.json()
+      const data = await apiJoinRoom(trimmed, currentUser)
       const nextRoomCode = data.roomCode || trimmed
       const nextRoomDbId = String(data.roomId)
       localStorage.setItem(STORAGE_KEYS.sessionToken, data.token)
