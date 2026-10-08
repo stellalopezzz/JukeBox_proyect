@@ -240,7 +240,12 @@ export function HostPage({ roomId }: { roomId: string }) {
       headers: ownerHeaders(),
     })
       .then(async (resp) => {
-        if (!resp.ok) return
+        if (!resp.ok) {
+          // Por ejemplo 403 si la sesion de este navegador no es la del dueño.
+          const body = await resp.json().catch(() => null)
+          setStatusMessage(body?.message || 'No se pudo empezar la reproducción.')
+          return
+        }
         const updated = await fetchQueue(resolvedRoomId)
         setQueue(updated)
       })
