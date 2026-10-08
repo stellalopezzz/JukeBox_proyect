@@ -43,14 +43,16 @@ public class RoomService {
         return roomRepository.save(room);
     }
 
-    public Room getRoomByCode(String code) {
+     public Room getRoomByCode(String code) {
         // Validar que el código no sea nulo o vacío
         if (code == null || code.trim().isEmpty()) {
             throw new IllegalArgumentException("El código de la sala no puede estar vacío");
         }
-        
-        return roomRepository.findByCode(code)
-                .orElseThrow(() -> new RuntimeException("Sala no encontrada con código: " + code));
+
+        String normalizedCode = code.trim().toUpperCase();
+
+        return roomRepository.findByCode(normalizedCode)
+                .orElseThrow(() -> new RuntimeException("Sala no encontrada con código: " + normalizedCode));
     }
 
     // Generar código único de 6 caracteres alfanuméricos (uppercase)
