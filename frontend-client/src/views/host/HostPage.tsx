@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useYouTubeIFramePlayer } from './hooks/useYouTubeIFramePlayer'
+import { STORAGE_KEYS } from '../../shared/storage'
 
 const SERVER_BASE = 'http://localhost:8080/api'
 const SOCKET_URL = 'http://localhost:3000'
@@ -30,6 +31,13 @@ function thumbUrl(item: { songThumb?: string; songYtId?: string }): string {
   if (item.songThumb) return item.songThumb
   if (item.songYtId) return `https://img.youtube.com/vi/${item.songYtId}/hqdefault.jpg`
   return PLACEHOLDER_THUMB
+}
+
+// El backend solo deja avanzar o borrar canciones al owner de la sala,
+// y lo reconoce por el token de sesion que guardo el login.
+function ownerHeaders(): HeadersInit {
+  const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
+  return token ? { 'X-Session-Token': token } : {}
 }
 
 async function fetchQueue(roomId: string): Promise<QueueItem[]> {
@@ -96,6 +104,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     try {
       const nextResp = await fetch(`${SERVER_BASE}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
         method: 'PATCH',
+        headers: ownerHeaders(),
       })
       if (!nextResp.ok) {
         setStatusMessage('No hay siguiente canción o no se pudo avanzar.')
@@ -223,7 +232,10 @@ export function HostPage({ roomId }: { roomId: string }) {
 
     bootstrappedRef.current = true
     advancingRef.current = true
-    fetch(`${SERVER_BASE}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, { method: 'PATCH' })
+    fetch(`${SERVER_BASE}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
+      method: 'PATCH',
+      headers: ownerHeaders(),
+    })
       .then(async (resp) => {
         if (!resp.ok) return
         const updated = await fetchQueue(resolvedRoomId)
@@ -257,7 +269,10 @@ export function HostPage({ roomId }: { roomId: string }) {
     if (deletingId != null) return
     setDeletingId(queueItemId)
     try {
-      const resp = await fetch(`${SERVER_BASE}/queue/${queueItemId}`, { method: 'DELETE' })
+      const resp = await fetch(`${SERVER_BASE}/queue/${queueItemId}`, {
+        method: 'DELETE',
+        headers: ownerHeaders(),
+      })
       if (!resp.ok) {
         const body = await resp.json().catch(() => null)
         const msg =
