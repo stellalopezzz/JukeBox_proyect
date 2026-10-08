@@ -46,9 +46,17 @@ public class RoomController {
                 ));
     }
 
+    // Devolvemos solo los datos publicos de la sala. Si devolvieramos la entidad Room,
+    // Jackson serializaria tambien el owner (con su password hasheada y su token de sesion),
+    // y si el owner esta unido a su propia sala entraria en un ciclo infinito Room -> owner -> room.
     @GetMapping("/{code}")
-    public ResponseEntity<Room> getRoomByCode(@PathVariable String code) {
+    public ResponseEntity<Map<String, Object>> getRoomByCode(@PathVariable String code) {
         Room room = roomService.getRoomByCode(code);
-        return ResponseEntity.ok(room);
+        return ResponseEntity.ok(Map.of(
+                "id", room.getId(),
+                "code", room.getCode(),
+                "name", room.getName() != null ? room.getName() : "",
+                "isActive", Boolean.TRUE.equals(room.getIsActive())
+        ));
     }
 }
