@@ -8,11 +8,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -73,6 +76,22 @@ class AppUserServiceTest {
                 () -> userService.login("stella", "gym1234"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+    }
+
+    @Test
+    void getMeWorksForUserWithoutJoinedRoom() {
+        // Recien registrado: todavia no se unio a ninguna sala, asi que joinedRoom es null
+        AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
+        stored.setId(7L);
+        stored.setSessionToken("token-123");
+        when(userRepository.findBySessionToken("token-123")).thenReturn(Optional.of(stored));
+        when(roomRepository.findByOwnerId(7L)).thenReturn(List.of());
+
+        Map<String, Object> me = userService.getMe("token-123");
+
+        assertEquals("stella", me.get("username"));
+        assertNull(me.get("joinedRoom"));
+        assertEquals(List.of(), me.get("ownedRooms"));
     }
 
     private AppUser userWithPassword(String password) {

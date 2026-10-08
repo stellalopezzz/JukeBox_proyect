@@ -169,13 +169,12 @@ export function useSession({ setStatusMessage }) {
     setStatusMessage('')
   }
 
+  // El reproductor vive en /host/:code (ver Root.tsx), igual que al crear la sala.
   function enterAsHost(room) {
     localStorage.setItem(STORAGE_KEYS.roomCode, room.code)
     localStorage.setItem(STORAGE_KEYS.roomDbId, String(room.id))
-    setRoomCode(room.code)
-    setRoomDbId(String(room.id))
-    setStage('dashboard')
     setStatusMessage(`Entrando como Host a ${room.name || room.code}`)
+    window.location.href = `/host/${room.code}`
   }
 
   async function confirmCreateRoom() {

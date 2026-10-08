@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.HashMap;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
@@ -151,12 +152,13 @@ public class AppUserService {
                 ))
                 .collect(Collectors.toList());
 
-        return Map.of(
-                "userId", user.getId(),
-                "username", user.getUsername(),
-                "joinedRoom", joinedRoom,
-                "ownedRooms", ownedRooms
-        );
+        // Map.of no acepta valores null, y joinedRoom es null si el usuario no se unio a ninguna sala.
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", user.getId());
+        result.put("username", user.getUsername());
+        result.put("joinedRoom", joinedRoom);
+        result.put("ownedRooms", ownedRooms);
+        return result;
     }
 
     public void logout(String sessionToken) {
