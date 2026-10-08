@@ -60,6 +60,8 @@ export function HostPage({ roomId }: { roomId: string }) {
   const bootstrappedRef = useRef(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [nextLoading, setNextLoading] = useState(false)
+  // Sin sesion del owner en este navegador, el backend rechaza avanzar o borrar.
+  const [hasOwnerSession] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.sessionToken)))
 
   const normalizedQueue = useMemo(
     () =>
@@ -229,6 +231,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     if (advancingRef.current) return
     if (bootstrappedRef.current) return
     if (nowPlaying || pendingSongs.length === 0) return
+    if (!hasOwnerSession) return
 
     bootstrappedRef.current = true
     advancingRef.current = true
@@ -237,14 +240,19 @@ export function HostPage({ roomId }: { roomId: string }) {
       headers: ownerHeaders(),
     })
       .then(async (resp) => {
-        if (!resp.ok) return
+        if (!resp.ok) {
+          // Por ejemplo 403 si la sesion de este navegador no es la del dueño.
+          const body = await resp.json().catch(() => null)
+          setStatusMessage(body?.message || 'No se pudo empezar la reproducción.')
+          return
+        }
         const updated = await fetchQueue(resolvedRoomId)
         setQueue(updated)
       })
       .finally(() => {
         advancingRef.current = false
       })
-  }, [resolvedRoomId, nowPlaying, pendingSongs.length])
+  }, [resolvedRoomId, nowPlaying, pendingSongs.length, hasOwnerSession])
 
   useEffect(() => {
     bootstrappedRef.current = false
@@ -320,6 +328,11 @@ export function HostPage({ roomId }: { roomId: string }) {
             </div>
           </div>
           {statusMessage ? <p className="mt-4 text-sm text-amber-200/90">{statusMessage}</p> : null}
+          {!hasOwnerSession ? (
+            <p className="mt-4 text-sm text-amber-200/90">
+              Inicia sesion como dueño de la sala en este navegador para que la musica avance.
+            </p>
+          ) : null}
         </header>
 
         {roomCode && (
