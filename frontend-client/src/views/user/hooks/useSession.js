@@ -216,13 +216,15 @@ export function useSession({ setStatusMessage }) {
       return
     }
     const currentUser = username.trim()
-    if (!currentUser) {
+    const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
+    if (!currentUser || !token) {
       setStatusMessage('Debes iniciar sesion primero.')
       return
     }
     setJoiningRoom(true)
     try {
-      const data = await apiJoinRoom(trimmed, currentUser)
+      // El backend identifica al usuario por su token de sesion, no por el nombre
+      const data = await apiJoinRoom(trimmed, token)
       const nextRoomCode = data.roomCode || trimmed
       const nextRoomDbId = String(data.roomId)
       localStorage.setItem(STORAGE_KEYS.sessionToken, data.token)

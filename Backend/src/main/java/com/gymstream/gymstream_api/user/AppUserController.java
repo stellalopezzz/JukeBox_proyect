@@ -39,8 +39,10 @@ public class AppUserController {
     }
 
     @PostMapping("/rooms/join")
-    public ResponseEntity<Map<String, Object>> joinRoom(@Valid @RequestBody JoinRoomRequest request) {
-        AppUser user = userService.joinRoom(request.code(), request.username());
+    public ResponseEntity<Map<String, Object>> joinRoom(
+            @RequestHeader("X-Session-Token") String sessionToken,
+            @Valid @RequestBody JoinRoomRequest request) {
+        AppUser user = userService.joinRoom(request.code(), sessionToken);
 
         return ResponseEntity.ok(Map.of(
                 "token", user.getSessionToken(),

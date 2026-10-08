@@ -64,11 +64,11 @@ export async function apiLogout(sessionToken: string) {
   return res.json();
 }
 
-export async function apiJoinRoom(code: string, username: string) {
+export async function apiJoinRoom(code: string, sessionToken: string) {
   const res = await fetch(`${API_URL}/rooms/join`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, username }),
+    headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+    body: JSON.stringify({ code }),
   });
   if (!res.ok) throw new Error("No se pudo unir a la sala");
   return res.json();

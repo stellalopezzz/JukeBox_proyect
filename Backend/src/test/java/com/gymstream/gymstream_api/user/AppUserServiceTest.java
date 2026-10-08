@@ -1,5 +1,6 @@
 package com.gymstream.gymstream_api.user;
 
+import com.gymstream.gymstream_api.room.Room;
 import com.gymstream.gymstream_api.room.RoomRepository;
 import com.gymstream.gymstream_api.room.RoomService;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AppUserServiceTest {
@@ -92,6 +95,46 @@ class AppUserServiceTest {
         assertEquals("stella", me.get("username"));
         assertNull(me.get("joinedRoom"));
         assertEquals(List.of(), me.get("ownedRooms"));
+    }
+
+    @Test
+    void joinRoomUsesTheTokenOwnerAndKeepsTheirToken() {
+        AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
+        stored.setSessionToken("token-123");
+        Room room = new Room();
+        room.setId(1L);
+        room.setCode("ABC123");
+        when(userRepository.findBySessionToken("token-123")).thenReturn(Optional.of(stored));
+        when(roomService.getRoomByCode("ABC123")).thenReturn(room);
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser user = userService.joinRoom("ABC123", "token-123");
+
+        assertEquals("stella", user.getUsername());
+        assertEquals(room, user.getRoom());
+        // No se emite un token nuevo: sigue valiendo el que dio el login
+        assertEquals("token-123", user.getSessionToken());
+    }
+
+    @Test
+    void joinRoomRejectsMissingToken() {
+        // Antes bastaba con mandar un username para quedarse con un token de esa cuenta
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.joinRoom("ABC123", null));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+
+    @Test
+    void joinRoomRejectsUnknownToken() {
+        when(userRepository.findBySessionToken("token-falso")).thenReturn(Optional.empty());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.joinRoom("ABC123", "token-falso"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        verify(userRepository, never()).save(any(AppUser.class));
     }
 
     private AppUser userWithPassword(String password) {

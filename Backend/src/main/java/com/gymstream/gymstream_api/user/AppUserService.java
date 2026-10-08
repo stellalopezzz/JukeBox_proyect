@@ -80,45 +80,25 @@ public class AppUserService {
         return userRepository.save(user);
     }
 
-    public AppUser joinRoom(String roomCode, String username) {
+    public AppUser joinRoom(String roomCode, String sessionToken) {
         // Validar que el código de sala no sea nulo o vacío
         if (roomCode == null || roomCode.trim().isEmpty()) {
             throw new IllegalArgumentException("El código de la sala no puede estar vacío");
         }
-        
-        // Validar que el nombre de usuario no sea nulo o vacío
-        if (username == null || username.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre de usuario no puede estar vacío");
-        }
-        
-        // Validar longitud del nombre de usuario
-        if (username.length() > 50) {
-            throw new IllegalArgumentException("El nombre de usuario no puede exceder 50 caracteres");
-        }
-        
+
+        // Quien entra es el dueño del token (ya hizo login), no un nombre que llega
+        // en el body: así nadie puede tomar la cuenta de otro sabiendo su username.
+        AppUser user = getUserBySessionToken(sessionToken);
+
         // Obtener la sala validada (lanza excepción si no existe)
         Room room = roomService.getRoomByCode(roomCode.trim());
-        
+
         // Validar que la sala esté activa
         if (!Boolean.TRUE.equals(room.getIsActive())) {
             throw new RuntimeException("La sala no está activa");
         }
 
-        String trimmedUsername = username.trim();
-        Optional<AppUser> existingUserOpt = userRepository.findByUsername(trimmedUsername);
-
-        if (existingUserOpt.isPresent()) {
-            AppUser user = existingUserOpt.get();
-            user.setRoom(room);
-            user.setSessionToken(UUID.randomUUID().toString());
-            return userRepository.save(user);
-        }
-
-        // Crear nuevo usuario con token único de sesión
-        AppUser user = new AppUser();
-        user.setUsername(trimmedUsername);
         user.setRoom(room);
-        user.setSessionToken(UUID.randomUUID().toString());
         return userRepository.save(user);
     }
 
