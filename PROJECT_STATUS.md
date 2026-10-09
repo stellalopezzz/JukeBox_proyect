@@ -11,7 +11,7 @@ El proyecto tiene un MVP funcional.
 ### Backend
 - Java + Spring Boot
 - API REST
-- MySQL
+- PostgreSQL 17 (con Docker Compose)
 - Arquitectura organizada por feature
 - Controller / Service / Repository
 - Entities y DTOs
@@ -57,15 +57,18 @@ El proyecto tiene un MVP funcional.
 
 ## En qué estamos trabajando actualmente
 
-Pendiente de definir.
+Login con correo, por fases. La fase 0 (exigir el token de sesión para entrar a una sala) está en el PR #8, que reemplaza al PR #7.
 
 ## Último trabajo realizado
 
-Pendiente de actualizar.
+- Migración de MySQL a PostgreSQL 17 con Docker Compose (PR #6).
+- El host recibe las canciones nuevas y se puede volver a entrar como host (PR #5).
+- Contraseñas hasheadas con BCrypt (PR #1).
 
 ## Próximo paso
 
-Pendiente de definir.
+- Revisar y mergear el PR #8, y cerrar el PR #7.
+- Seguir con las siguientes fases del login con correo.
 
 ## Decisiones importantes
 
