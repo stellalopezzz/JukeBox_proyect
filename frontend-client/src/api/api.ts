@@ -64,11 +64,16 @@ export async function apiLogout(sessionToken: string) {
   return res.json();
 }
 
-export async function apiJoinRoom(code: string, username: string) {
+// Une al usuario logueado a una sala.
+// El token va en el header X-Session-Token (no en el body) porque es la forma en
+// que el backend sabe QUIEN hace el pedido: lo busca en la base y obtiene al
+// usuario. Antes mandabamos el username en el body, y como cualquiera puede
+// escribir un nombre, cualquiera podia entrar como otra persona.
+export async function apiJoinRoom(code: string, sessionToken: string) {
   const res = await fetch(`${API_URL}/rooms/join`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, username }),
+    headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+    body: JSON.stringify({ code }),
   });
   if (!res.ok) throw new Error("No se pudo unir a la sala");
   return res.json();

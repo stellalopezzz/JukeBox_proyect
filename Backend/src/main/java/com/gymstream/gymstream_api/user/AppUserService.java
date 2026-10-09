@@ -80,45 +80,36 @@ public class AppUserService {
         return userRepository.save(user);
     }
 
-    public AppUser joinRoom(String roomCode, String username) {
+    // Une a la sala al usuario que hizo login (el dueño del token).
+    // Antes recibia un username en vez del token y le generaba un token nuevo a esa
+    // cuenta: cualquiera que supiera un nombre de usuario podia quedarse con ella.
+    public AppUser joinRoom(String roomCode, String sessionToken) {
         // Validar que el código de sala no sea nulo o vacío
         if (roomCode == null || roomCode.trim().isEmpty()) {
             throw new IllegalArgumentException("El código de la sala no puede estar vacío");
         }
-        
-        // Validar que el nombre de usuario no sea nulo o vacío
-        if (username == null || username.trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre de usuario no puede estar vacío");
-        }
-        
-        // Validar longitud del nombre de usuario
-        if (username.length() > 50) {
-            throw new IllegalArgumentException("El nombre de usuario no puede exceder 50 caracteres");
-        }
-        
+
+        // Quien entra es el dueño del token (ya hizo login), no un nombre que llega
+        // en el body: así nadie puede tomar la cuenta de otro sabiendo su username.
+        // getUserBySessionToken es el mismo metodo que usan la cola y los votos:
+        // si el token falta o no existe en la base, lanza 401 (no autorizado) y
+        // el metodo termina aca, sin tocar la base de datos.
+        AppUser user = getUserBySessionToken(sessionToken);
+
         // Obtener la sala validada (lanza excepción si no existe)
         Room room = roomService.getRoomByCode(roomCode.trim());
-        
+
         // Validar que la sala esté activa
         if (!Boolean.TRUE.equals(room.getIsActive())) {
             throw new RuntimeException("La sala no está activa");
         }
 
-        String trimmedUsername = username.trim();
-        Optional<AppUser> existingUserOpt = userRepository.findByUsername(trimmedUsername);
-
-        if (existingUserOpt.isPresent()) {
-            AppUser user = existingUserOpt.get();
-            user.setRoom(room);
-            user.setSessionToken(UUID.randomUUID().toString());
-            return userRepository.save(user);
-        }
-
-        // Crear nuevo usuario con token único de sesión
-        AppUser user = new AppUser();
-        user.setUsername(trimmedUsername);
+        // Solo cambiamos la sala del usuario. Dos cosas que ya NO hacemos:
+        // - No generamos un token nuevo: el del login sigue valiendo. Si lo
+        //   cambiaramos, se invalidaria la sesion abierta en otras pestañas.
+        // - No creamos usuarios nuevos: antes, si el nombre no existia, se creaba
+        //   un AppUser sin contraseña. Ahora para existir hay que registrarse.
         user.setRoom(room);
-        user.setSessionToken(UUID.randomUUID().toString());
         return userRepository.save(user);
     }
 
