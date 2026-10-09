@@ -68,6 +68,18 @@ class AppUserServiceTest {
     }
 
     @Test
+    void registerRejectsPasswordOverBcryptByteLimit() {
+        // 19 emojis: 38 caracteres de Java pero 76 bytes en UTF-8
+        String password = "\uD83D\uDE00".repeat(19);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.register("stella@gmail.com", "stella", password));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+
+    @Test
     void registerTranslatesUniqueViolationToConflict() {
         // Simula dos registros simultáneos: el chequeo pasa pero la base rechaza el duplicado
         when(userRepository.save(any(AppUser.class))).thenThrow(new DataIntegrityViolationException("duplicado"));

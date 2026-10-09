@@ -11,6 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.Optional;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +81,10 @@ public class AppUserService {
         }
         if (password.length() < 8 || password.length() > 64) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password debe tener entre 8 y 64 caracteres");
+        }
+        // BCrypt acepta hasta 72 bytes, y un emoji ocupa 4: 64 caracteres pueden pasarse
+        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password es demasiado largo");
         }
 
         if (userRepository.existsByEmail(normalizedEmail)) {
