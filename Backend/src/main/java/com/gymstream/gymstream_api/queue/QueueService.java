@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -229,7 +230,11 @@ public class QueueService {
     private List<QueueItemDTO> scorePendingItems(List<QueueItem> pendingItems, String artistToAvoid) {
         List<QueueItemDTO> pendingDTOs = new ArrayList<>();
 
-        for (QueueItem item : pendingItems) {
+        // La base no garantiza el orden de las filas: ordenamos primero por llegada (la más vieja primero)
+        List<QueueItem> byArrival = new ArrayList<>(pendingItems);
+        byArrival.sort(Comparator.comparing(QueueItem::getAddedAt).thenComparing(QueueItem::getId));
+
+        for (QueueItem item : byArrival) {
             long minutosEspera = java.time.Duration.between(
                     item.getAddedAt(),
                     LocalDateTime.now()
@@ -246,6 +251,7 @@ public class QueueService {
             pendingDTOs.add(new QueueItemDTO(item, score));
         }
 
+        // sort es estable: si dos canciones empatan en score, queda primero la que llegó antes
         pendingDTOs.sort((a, b) -> Double.compare(b.getScore(), a.getScore()));
         return pendingDTOs;
     }

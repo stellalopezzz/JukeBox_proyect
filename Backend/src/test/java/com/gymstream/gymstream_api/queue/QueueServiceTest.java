@@ -67,6 +67,34 @@ class QueueServiceTest {
     }
 
     @Test
+    void tiedScoresPlayOldestSongFirst() {
+        Room room = room(1L);
+        QueueItem older = queueItem(21L, room, song("yt-1", "Song A", "Artist A"), 1);
+        QueueItem newer = queueItem(22L, room, song("yt-2", "Song B", "Artist B"), 1);
+        // Las dos se agregaron dentro del mismo minuto, así que empatan en score
+        older.setAddedAt(LocalDateTime.now().minusSeconds(100));
+        newer.setAddedAt(LocalDateTime.now().minusSeconds(70));
+
+        // La base devuelve la más nueva primero, como puede pasar en PostgreSQL
+        when(queueRepository.findByRoomIdAndStatus(1L, QueueItem.QueueStatus.PENDING))
+                .thenReturn(List.of(newer, older));
+        when(queueRepository.findByRoomIdAndStatus(1L, QueueItem.QueueStatus.PLAYING))
+                .thenReturn(List.of());
+        when(queueRepository.findWithLockByRoomIdAndStatus(1L, QueueItem.QueueStatus.PLAYING))
+                .thenReturn(List.of());
+        when(queueRepository.findWithLockByRoomIdAndStatus(1L, QueueItem.QueueStatus.PENDING))
+                .thenReturn(List.of(newer, older));
+        when(queueRepository.save(any(QueueItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<QueueItemDTO> queue = queueService.getQueue(1L);
+        assertEquals(queue.get(0).getScore(), queue.get(1).getScore());
+        assertEquals(21L, queue.get(0).getId());
+        assertEquals(22L, queue.get(1).getId());
+
+        assertEquals(21L, queueService.nextTrack(1L).getId());
+    }
+
+    @Test
     void addToQueueCreatesSongQueueItemAndInitialVote() {
         Room room = room(1L);
         AppUser user = user(7L, room);
