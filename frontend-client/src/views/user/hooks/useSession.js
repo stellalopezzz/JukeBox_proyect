@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiCreateRoom, apiJoinRoom, apiLogin, apiLogout, apiMe, apiRegister } from '../../../api/api'
+import { apiCreateRoom, apiJoinRoom, apiLogin, apiLogout, apiMe, apiRegister, apiResendVerification } from '../../../api/api'
 import { STORAGE_KEYS, clearStoredSession } from '../../../shared/storage'
 
 // Quien soy y en que sala estoy: login/registro, restaurar la sesion guardada,
@@ -11,6 +11,8 @@ export function useSession({ setStatusMessage }) {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // null = todavia no lo sabemos (no se pidio /users/me); true/false lo dice el backend
+  const [emailVerified, setEmailVerified] = useState(null)
   const [roomCode, setRoomCode] = useState('')
   const [roomDbId, setRoomDbId] = useState('')
   const [ownedRooms, setOwnedRooms] = useState([])
@@ -48,6 +50,7 @@ export function useSession({ setStatusMessage }) {
     } else if (storedToken && storedAuthUser) {
       apiMe(storedToken)
         .then((me) => {
+          setEmailVerified(me.emailVerified)
           if (me.ownedRooms && me.ownedRooms.length > 0) {
             setOwnedRooms(me.ownedRooms)
             localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
@@ -81,6 +84,7 @@ export function useSession({ setStatusMessage }) {
       setPassword('')
 
       const me = await apiMe(data.token)
+      setEmailVerified(me.emailVerified)
       if (me.ownedRooms && me.ownedRooms.length > 0) {
         setOwnedRooms(me.ownedRooms)
         localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
@@ -116,6 +120,7 @@ export function useSession({ setStatusMessage }) {
       setPassword('')
 
       const me = await apiMe(data.token)
+      setEmailVerified(me.emailVerified)
       if (me.ownedRooms && me.ownedRooms.length > 0) {
         setOwnedRooms(me.ownedRooms)
         localStorage.setItem(STORAGE_KEYS.ownedRooms, JSON.stringify(me.ownedRooms))
@@ -128,6 +133,17 @@ export function useSession({ setStatusMessage }) {
       }
     } catch (error) {
       setStatusMessage(error.message || 'No se pudo registrar.')
+    }
+  }
+
+  async function resendVerification() {
+    const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
+    if (!token) return
+    try {
+      await apiResendVerification(token)
+      setStatusMessage('Te enviamos otro correo de verificacion.')
+    } catch (error) {
+      setStatusMessage(error.message || 'No se pudo reenviar el correo.')
     }
   }
 
@@ -156,6 +172,7 @@ export function useSession({ setStatusMessage }) {
     setUsername('')
     setEmail('')
     setPassword('')
+    setEmailVerified(null)
     setShowCreateRoomModal(false)
     setRoomName('')
     setShowJoinRoomModal(false)
@@ -261,6 +278,8 @@ export function useSession({ setStatusMessage }) {
     setEmail,
     password,
     setPassword,
+    emailVerified,
+    resendVerification,
     roomCode,
     roomDbId,
     ownedRooms,

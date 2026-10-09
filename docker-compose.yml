@@ -11,5 +11,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Servidor de correo falso para desarrollo: atrapa los correos que manda el backend
+  # y los muestra en http://localhost:8025 sin enviar nada a internet.
+  mail:
+    image: axllent/mailpit:v1.31
+    container_name: jukebox-mail
+    ports:
+      - "1025:1025"   # SMTP, el backend envía acá
+      - "8025:8025"   # página web para leer los correos
+
 volumes:
   pgdata:

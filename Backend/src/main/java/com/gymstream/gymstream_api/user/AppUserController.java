@@ -11,9 +11,11 @@ import java.util.Map;
 public class AppUserController {
 
     private final AppUserService userService;
+    private final EmailVerificationService emailVerificationService;
 
-    public AppUserController(AppUserService userService) {
+    public AppUserController(AppUserService userService, EmailVerificationService emailVerificationService) {
         this.userService = userService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @PostMapping("/rooms/login")
@@ -51,6 +53,20 @@ public class AppUserController {
                 "roomId", user.getRoom().getId(),
                 "roomCode", user.getRoom().getCode()
         ));
+    }
+
+    // Lo llama la página /verificar del frontend con el token que venía en el enlace del correo
+    @PostMapping("/users/verify-email")
+    public ResponseEntity<Map<String, Object>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        emailVerificationService.verify(request.token());
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @PostMapping("/users/resend-verification")
+    public ResponseEntity<Map<String, Object>> resendVerification(@RequestHeader("X-Session-Token") String sessionToken) {
+        AppUser user = userService.getUserBySessionToken(sessionToken);
+        emailVerificationService.resend(user);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @GetMapping("/users/me")

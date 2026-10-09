@@ -1,4 +1,4 @@
-export function LobbyScreen({ username, ownedRooms, onLogout, onEnterAsHost, onCreateRoom, onJoinRoom }) {
+export function LobbyScreen({ username, emailVerified, onResendVerification, ownedRooms, onLogout, onEnterAsHost, onCreateRoom, onJoinRoom }) {
   return (
     <main className="space-y-6">
       <section className="rounded-3xl border border-slate-800 bg-slate-900/80 p-6 shadow-xl shadow-cyan-500/10">
@@ -17,6 +17,20 @@ export function LobbyScreen({ username, ownedRooms, onLogout, onEnterAsHost, onC
           </button>
         </div>
       </section>
+
+      {/* Solo con false: null significa que todavia no sabemos si esta verificado */}
+      {emailVerified === false && (
+        <section className="flex flex-col gap-3 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-amber-100">Revisa tu correo y abre el enlace para confirmar tu cuenta.</p>
+          <button
+            type="button"
+            onClick={onResendVerification}
+            className="rounded-3xl border border-amber-400/50 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300"
+          >
+            Reenviar correo
+          </button>
+        </section>
+      )}
 
       {ownedRooms.length > 0 && (
         <section>

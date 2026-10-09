@@ -24,13 +24,16 @@ public class AppUserService {
     private final RoomService roomService;
     private final RoomRepository roomRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
 
     public AppUserService(AppUserRepository appUserRepository, RoomService roomService,
-                          RoomRepository roomRepository, PasswordEncoder passwordEncoder) {
+                          RoomRepository roomRepository, PasswordEncoder passwordEncoder,
+                          EmailVerificationService emailVerificationService) {
         this.userRepository = appUserRepository;
         this.roomService = roomService;
         this.roomRepository = roomRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailVerificationService = emailVerificationService;
     }
 
     // PostgreSQL distingue mayúsculas: sin esto "Ana@x.com" y "ana@x.com" serían dos cuentas.
@@ -99,13 +102,18 @@ public class AppUserService {
         user.setUsername(trimmedUsername);
         user.setPassword(passwordEncoder.encode(password));
         user.setSessionToken(UUID.randomUUID().toString());
+        user.setEmailVerified(false);
+        AppUser saved;
         try {
-            return userRepository.save(user);
+            saved = userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
             // Dos registros al mismo tiempo pueden pasar los chequeos de arriba;
             // la restricción UNIQUE de la base frena al segundo
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese correo o username ya esta en uso");
         }
+        // Se puede usar la app sin verificar; el correo solo confirma que la dirección es suya
+        emailVerificationService.sendVerificationEmail(saved);
+        return saved;
     }
 
     // Une a la sala al usuario que hizo login (el dueño del token).
@@ -165,6 +173,8 @@ public class AppUserService {
         Map<String, Object> result = new HashMap<>();
         result.put("userId", user.getId());
         result.put("username", user.getUsername());
+        result.put("email", user.getEmail());
+        result.put("emailVerified", Boolean.TRUE.equals(user.getEmailVerified()));
         result.put("joinedRoom", joinedRoom);
         result.put("ownedRooms", ownedRooms);
         return result;

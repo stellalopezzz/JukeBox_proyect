@@ -63,6 +63,8 @@ function App() {
     screen = (
       <LobbyScreen
         username={session.username}
+        emailVerified={session.emailVerified}
+        onResendVerification={session.resendVerification}
         ownedRooms={session.ownedRooms}
         onLogout={handleLogout}
         onEnterAsHost={session.enterAsHost}
