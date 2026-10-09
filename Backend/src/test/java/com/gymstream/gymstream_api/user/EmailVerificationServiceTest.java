@@ -13,7 +13,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,11 +57,21 @@ class EmailVerificationServiceTest {
         EmailToken token = token(NOW.plusSeconds(60), null);
         when(tokenRepository.findByTokenHashAndType(EmailVerificationService.hash("abc"), EmailTokenType.VERIFY_EMAIL))
                 .thenReturn(Optional.of(token));
+        when(tokenRepository.markUsed(any(), eq(NOW))).thenReturn(1);
 
         service.verify("abc");
 
         assertTrue(token.getUser().getEmailVerified());
-        assertNotNull(token.getUsedAt());
+    }
+
+    @Test
+    void verifyRejectsTokenUsedByAConcurrentRequest() {
+        EmailToken token = token(NOW.plusSeconds(60), null);
+        when(tokenRepository.findByTokenHashAndType(any(), eq(EmailTokenType.VERIFY_EMAIL))).thenReturn(Optional.of(token));
+        // Al leerlo parecia sin usar, pero el UPDATE no cambio ninguna fila: otro pedido gano
+        when(tokenRepository.markUsed(any(), any())).thenReturn(0);
+
+        assertInvalid("abc");
     }
 
     @Test

@@ -76,8 +76,10 @@ public class EmailVerificationService {
             throw invalidLink();
         }
 
-        token.setUsedAt(now);
-        tokenRepository.save(token);
+        // Si dos pedidos llegan a la vez con el mismo enlace, solo uno logra marcarlo
+        if (tokenRepository.markUsed(token.getId(), now) == 0) {
+            throw invalidLink();
+        }
         AppUser user = token.getUser();
         user.setEmailVerified(true);
         userRepository.save(user);
