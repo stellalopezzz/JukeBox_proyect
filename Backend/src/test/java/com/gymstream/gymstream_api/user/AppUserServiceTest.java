@@ -97,8 +97,16 @@ class AppUserServiceTest {
         assertEquals(List.of(), me.get("ownedRooms"));
     }
 
+    // Los tests siguen el patron Arrange / Act / Assert:
+    // - Arrange (preparar): armamos los datos y le decimos a los mocks que devolver.
+    //   Un mock es un objeto falso (Mockito) que reemplaza al repositorio real,
+    //   asi el test no necesita una base de datos.
+    // - Act (actuar): llamamos al metodo que queremos probar.
+    // - Assert (comprobar): verificamos que el resultado sea el esperado.
+
     @Test
     void joinRoomUsesTheTokenOwnerAndKeepsTheirToken() {
+        // Arrange: "stella" ya hizo login y tiene el token "token-123"
         AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
         stored.setSessionToken("token-123");
         Room room = new Room();
@@ -106,10 +114,13 @@ class AppUserServiceTest {
         room.setCode("ABC123");
         when(userRepository.findBySessionToken("token-123")).thenReturn(Optional.of(stored));
         when(roomService.getRoomByCode("ABC123")).thenReturn(room);
+        // save() devuelve el mismo usuario que recibe, como haria la base real
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
+        // Act
         AppUser user = userService.joinRoom("ABC123", "token-123");
 
+        // Assert: entro la dueña del token, a la sala pedida
         assertEquals("stella", user.getUsername());
         assertEquals(room, user.getRoom());
         // No se emite un token nuevo: sigue valiendo el que dio el login
@@ -119,17 +130,23 @@ class AppUserServiceTest {
     @Test
     void joinRoomRejectsMissingToken() {
         // Antes bastaba con mandar un username para quedarse con un token de esa cuenta
+        // Arrange: no hace falta preparar nada, el request llega sin token (null)
+        // Act + Assert: assertThrows ejecuta la llamada y comprueba que lance la excepcion
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userService.joinRoom("ABC123", null));
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+        // verify(..., never()) comprueba que save() no se llamo NUNCA: no alcanza con
+        // que tire error, queremos asegurar que no se guardo nada en la base.
         verify(userRepository, never()).save(any(AppUser.class));
     }
 
     @Test
     void joinRoomRejectsUnknownToken() {
+        // Arrange: alguien manda un token inventado; la base no lo encuentra
         when(userRepository.findBySessionToken("token-falso")).thenReturn(Optional.empty());
 
+        // Act + Assert: 401 y la base queda sin tocar
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> userService.joinRoom("ABC123", "token-falso"));
 
