@@ -81,19 +81,13 @@ public class AppUserService {
     }
 
     // Une a la sala al usuario que hizo login (el dueño del token).
-    // Antes recibia un username en vez del token y le generaba un token nuevo a esa
-    // cuenta: cualquiera que supiera un nombre de usuario podia quedarse con ella.
     public AppUser joinRoom(String roomCode, String sessionToken) {
         // Validar que el código de sala no sea nulo o vacío
         if (roomCode == null || roomCode.trim().isEmpty()) {
             throw new IllegalArgumentException("El código de la sala no puede estar vacío");
         }
 
-        // Quien entra es el dueño del token (ya hizo login), no un nombre que llega
-        // en el body: así nadie puede tomar la cuenta de otro sabiendo su username.
-        // getUserBySessionToken es el mismo metodo que usan la cola y los votos:
-        // si el token falta o no existe en la base, lanza 401 (no autorizado) y
-        // el metodo termina aca, sin tocar la base de datos.
+        // Lanza 401 si el token falta o no existe
         AppUser user = getUserBySessionToken(sessionToken);
 
         // Obtener la sala validada (lanza excepción si no existe)
@@ -104,11 +98,7 @@ public class AppUserService {
             throw new RuntimeException("La sala no está activa");
         }
 
-        // Solo cambiamos la sala del usuario. Dos cosas que ya NO hacemos:
-        // - No generamos un token nuevo: el del login sigue valiendo. Si lo
-        //   cambiaramos, se invalidaria la sesion abierta en otras pestañas.
-        // - No creamos usuarios nuevos: antes, si el nombre no existia, se creaba
-        //   un AppUser sin contraseña. Ahora para existir hay que registrarse.
+        // No se genera un token nuevo: sigue valiendo el del login
         user.setRoom(room);
         return userRepository.save(user);
     }

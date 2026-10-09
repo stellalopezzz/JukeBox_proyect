@@ -216,8 +216,7 @@ export function useSession({ setStatusMessage }) {
       return
     }
     const currentUser = username.trim()
-    // El token se guardo en localStorage al hacer login (handleAuthLogin).
-    // Sin token no hay sesion, asi que no tiene sentido llamar al backend.
+    // Se guardó al hacer login; sin token no hay sesión
     const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
     if (!currentUser || !token) {
       setStatusMessage('Debes iniciar sesion primero.')
