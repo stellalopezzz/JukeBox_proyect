@@ -29,6 +29,11 @@ public class AppUser {
     @Column(unique = true, length = 254)
     private String email;
 
+    // true cuando el usuario abrió el enlace del correo. Boolean (no boolean) para que
+    // la tabla con usuarios viejos acepte la columna: null cuenta como no verificado.
+    @Column(name = "email_verified")
+    private Boolean emailVerified;
+
     // Hash BCrypt del password (~60 caracteres), nunca el texto original.
     // La regla de 4 a 15 caracteres vive en RegisterRequest/LoginRequest, que validan lo que escribe el usuario.
     @NotBlank(message = "La contraseña no puede estar vacía")

@@ -56,7 +56,7 @@ El proyecto son tres servicios independientes que hay que levantar por separado 
 
 ### Base de datos (PostgreSQL 17 con Docker Compose, puerto 5432)
 
-`docker-compose.yml` en la raíz levanta un contenedor `postgres:17` (`jukebox-db`) con usuario, contraseña y base `jukebox`, y guarda los datos en el volumen `pgdata`.
+`docker-compose.yml` en la raíz levanta un contenedor `postgres:17` (`jukebox-db`) con usuario, contraseña y base `jukebox`, y guarda los datos en el volumen `pgdata`. También levanta Mailpit (`jukebox-mail`), un servidor de correo falso para desarrollo: recibe por SMTP en el puerto 1025 y muestra los correos en http://localhost:8025.
 
 ```powershell
 docker compose up -d   # levantar la base en segundo plano
@@ -65,7 +65,7 @@ docker compose down    # apagarla (los datos quedan en el volumen)
 
 ### Backend (Java 21 + Spring Boot + Maven, puerto 8080)
 
-Requiere variables de entorno antes de arrancar: `SPRING_DATASOURCE_URL` (por ejemplo `jdbc:postgresql://localhost:5432/jukebox`), `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (PostgreSQL; con el `docker-compose.yml` son `jukebox` / `jukebox`), `YOUTUBE_API_KEY`, y opcionalmente `INTERNAL_API_KEY` (si no está seteada, el backend simplemente no notifica al realtime-service).
+Requiere variables de entorno antes de arrancar: `SPRING_DATASOURCE_URL` (por ejemplo `jdbc:postgresql://localhost:5432/jukebox`), `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (PostgreSQL; con el `docker-compose.yml` son `jukebox` / `jukebox`), `YOUTUBE_API_KEY`, y opcionalmente `INTERNAL_API_KEY` (si no está seteada, el backend simplemente no notifica al realtime-service). Para que mande correos de verdad a Mailpit: `SPRING_MAIL_HOST=localhost` y `SPRING_MAIL_PORT=1025`; si no se setean, el correo se imprime en la consola del backend. `APP_FRONTEND_URL` (por defecto `http://localhost:5173`) es la base del enlace que va en el correo.
 
 ```powershell
 cd Backend
@@ -110,7 +110,7 @@ npm start
 
 - **Backend (Spring Boot, :8080)** es la fuente de verdad: expone la API REST, tiene la base de datos PostgreSQL y toda la lógica de negocio.
 - **realtime-service (Node, :3000)** no tiene lógica de negocio ni base de datos propia; es un puente de eventos. El backend le hace `POST /internal/notify` (protegido con header `x-api-key`, ver `RealtimeNotifier.java`) cada vez que la cola cambia, y el realtime-service reemite ese evento por Socket.io a los clientes conectados a esa `roomId` (`index.js`). Los clientes del frontend se conectan directamente al puerto 3000 vía `socket.io-client`, sin pasar por el backend.
-- **frontend-client (Vite, :5173)** es una SPA sin librería de routing: `Root.tsx` decide qué renderizar leyendo `window.location.pathname` a mano — si matchea `/host/:roomId` sirve `HostPage` (vista del reproductor que corre en la PC del gimnasio), y si no sirve `App.jsx` (vista de usuario/invitado: login, buscar, votar).
+- **frontend-client (Vite, :5173)** es una SPA sin librería de routing: `Root.tsx` decide qué renderizar leyendo `window.location.pathname` a mano — si matchea `/host/:roomId` sirve `HostPage` (vista del reproductor que corre en la PC del gimnasio), si es `/verificar` sirve `VerifyEmailPage` (el enlace del correo de verificación), y si no sirve `App.jsx` (vista de usuario/invitado: login, buscar, votar).
 
 ### Backend organizado por feature
 
@@ -118,7 +118,7 @@ Bajo `Backend/src/main/java/com/gymstream/gymstream_api/`, cada paquete es un fe
 
 ### Autenticación (sin Spring Security)
 
-Es un esquema de token de sesión manual: `AppUser.sessionToken` (UUID) se genera en login/register/joinRoom y el cliente lo reenvía en el header `X-Session-Token`. Cada controller que lo necesita lo resuelve a mano llamando a `AppUserService.getUserBySessionToken()`. Las contraseñas se guardan hasheadas con BCrypt: `AppUserService` usa el bean `PasswordEncoder` definido en `config/PasswordConfig.java` (`encode` al registrar, `matches` al hacer login). Solo se usa la dependencia `spring-security-crypto`, no el starter de Spring Security. Los usuarios creados antes de este cambio, con contraseña en texto plano, ya no pueden loguearse y deben registrarse de nuevo. El login es con correo + contraseña (`AppUser.email`, único, guardado en minúsculas por `AppUserService.normalizeEmail`); el `username` se pide al registrarse y queda como nombre visible. Los usuarios sin correo (creados antes de este cambio) no pueden loguearse y deben registrarse de nuevo.
+Es un esquema de token de sesión manual: `AppUser.sessionToken` (UUID) se genera en login/register/joinRoom y el cliente lo reenvía en el header `X-Session-Token`. Cada controller que lo necesita lo resuelve a mano llamando a `AppUserService.getUserBySessionToken()`. Las contraseñas se guardan hasheadas con BCrypt: `AppUserService` usa el bean `PasswordEncoder` definido en `config/PasswordConfig.java` (`encode` al registrar, `matches` al hacer login). Solo se usa la dependencia `spring-security-crypto`, no el starter de Spring Security. Los usuarios creados antes de este cambio, con contraseña en texto plano, ya no pueden loguearse y deben registrarse de nuevo. El login es con correo + contraseña (`AppUser.email`, único, guardado en minúsculas por `AppUserService.normalizeEmail`); el `username` se pide al registrarse y queda como nombre visible. Los usuarios sin correo (creados antes de este cambio) no pueden loguearse y deben registrarse de nuevo. Al registrarse, `EmailVerificationService` manda un enlace `/verificar?token=...` (válido 24 horas, de un solo uso; en la tabla `email_tokens` solo se guarda el hash SHA-256 del token). La página `VerifyEmailPage` lo manda a `POST /api/users/verify-email`, que marca `AppUser.emailVerified`. Por ahora un usuario sin verificar puede usar la app igual; el lobby le muestra un aviso con un botón para reenviar el correo.
 
 ### Modelo de dominio
 

@@ -124,3 +124,28 @@ export async function apiToggleVote(sessionToken: string, queueItemId: number, a
     throw new Error(err?.message || "No se pudo actualizar el voto.");
   }
 }
+
+export async function apiVerifyEmail(token: string) {
+  const res = await fetch(`${API_URL}/users/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message || "No se pudo verificar el correo");
+  }
+  return res.json();
+}
+
+export async function apiResendVerification(sessionToken: string) {
+  const res = await fetch(`${API_URL}/users/resend-verification`, {
+    method: "POST",
+    headers: { "X-Session-Token": sessionToken },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message || "No se pudo reenviar el correo");
+  }
+  return res.json();
+}

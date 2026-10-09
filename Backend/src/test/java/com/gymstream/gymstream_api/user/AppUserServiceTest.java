@@ -33,8 +33,9 @@ class AppUserServiceTest {
     private final RoomRepository roomRepository = mock(RoomRepository.class);
     // Encoder real: queremos comprobar que el hash funciona de verdad, no simularlo
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final EmailVerificationService emailVerificationService = mock(EmailVerificationService.class);
     private final AppUserService userService =
-            new AppUserService(userRepository, roomService, roomRepository, passwordEncoder);
+            new AppUserService(userRepository, roomService, roomRepository, passwordEncoder, emailVerificationService);
 
     @Test
     void registerStoresHashedPasswordInsteadOfPlainText() {
@@ -54,6 +55,16 @@ class AppUserServiceTest {
         AppUser user = userService.register("  Stella@Gmail.COM ", "stella", "gym12345");
 
         assertEquals("stella@gmail.com", user.getEmail());
+    }
+
+    @Test
+    void registerSendsVerificationEmailAndStartsUnverified() {
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser user = userService.register("stella@gmail.com", "stella", "gym12345");
+
+        assertEquals(false, user.getEmailVerified());
+        verify(emailVerificationService).sendVerificationEmail(user);
     }
 
     @Test
