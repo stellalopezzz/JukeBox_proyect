@@ -41,20 +41,10 @@ public class AppUserController {
     // Unirse a una sala. Solo puede hacerlo alguien que ya inicio sesion.
     @PostMapping("/rooms/join")
     public ResponseEntity<Map<String, Object>> joinRoom(
-            // @RequestHeader le pide a Spring que lea el header "X-Session-Token" del request
-            // y lo pase como parametro. Es el token que el usuario recibio al hacer login.
-            // Si el header no viene, Spring lanza MissingRequestHeaderException antes de
-            // entrar aca, y GlobalExceptionHandler la convierte en un 401 (no autorizado).
             @RequestHeader("X-Session-Token") String sessionToken,
-            // @RequestBody convierte el JSON del body en un JoinRoomRequest;
-            // @Valid hace que se apliquen las validaciones del record (@NotBlank).
             @Valid @RequestBody JoinRoomRequest request) {
-        // El controller no decide nada de seguridad: le pasa el token al service,
-        // que es quien comprueba de quien es (asi la regla vive en un solo lugar).
         AppUser user = userService.joinRoom(request.code(), sessionToken);
 
-        // Devolvemos el mismo token que ya tenia (no uno nuevo), para que el
-        // frontend pueda seguir guardandolo igual que antes.
         return ResponseEntity.ok(Map.of(
                 "token", user.getSessionToken(),
                 "userId", user.getId(),
