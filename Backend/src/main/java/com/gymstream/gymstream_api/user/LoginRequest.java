@@ -1,14 +1,12 @@
 package com.gymstream.gymstream_api.user;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 public record LoginRequest(
-        @NotBlank(message = "El username no puede estar vacio")
-        String username,
+        @NotBlank(message = "El correo no puede estar vacio")
+        String email,
 
         @NotBlank(message = "El password no puede estar vacio")
-        @Size(min = 4, max = 15, message = "El password debe tener entre 4 y 15 caracteres")
         String password
 ) {
 }

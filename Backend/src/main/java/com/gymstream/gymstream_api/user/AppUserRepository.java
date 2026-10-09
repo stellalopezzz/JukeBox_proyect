@@ -12,4 +12,9 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
 
     // para verificar duplicados
     boolean existsByUsername(String username);
+
+    // para el login y para verificar duplicados de correo
+    Optional<AppUser> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 }

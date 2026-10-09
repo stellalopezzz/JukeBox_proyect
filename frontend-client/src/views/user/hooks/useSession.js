@@ -9,6 +9,7 @@ export function useSession({ setStatusMessage }) {
   const [authMode, setAuthMode] = useState('signin') // "signin" | "register"
   const [stage, setStage] = useState('login') // "login" | "dashboard"
   const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [roomCode, setRoomCode] = useState('')
   const [roomDbId, setRoomDbId] = useState('')
@@ -62,19 +63,21 @@ export function useSession({ setStatusMessage }) {
   async function handleAuthLogin(event) {
     event.preventDefault()
 
-    if (!username.trim() || !password.trim()) {
-      setStatusMessage('Completa usuario y contraseña.')
+    if (!email.trim() || !password) {
+      setStatusMessage('Completa correo y contraseña.')
       return
     }
 
     try {
-      const data = await apiLogin(username.trim(), password.trim())
+      // La contraseña va sin trim(): un espacio puede ser parte de ella
+      const data = await apiLogin(email.trim(), password)
       localStorage.setItem(STORAGE_KEYS.authUser, data.username)
       localStorage.setItem(STORAGE_KEYS.sessionToken, data.token)
       localStorage.setItem(STORAGE_KEYS.userId, String(data.userId))
       setUsername(data.username)
       setAuthStage('home')
       setStatusMessage(`Bienvenido ${data.username}`)
+      setEmail('')
       setPassword('')
 
       const me = await apiMe(data.token)
@@ -96,19 +99,20 @@ export function useSession({ setStatusMessage }) {
   async function handleRegister(event) {
     event.preventDefault()
 
-    if (!username.trim() || !password.trim()) {
-      setStatusMessage('Completa usuario y contraseña.')
+    if (!email.trim() || !username.trim() || !password) {
+      setStatusMessage('Completa correo, usuario y contraseña.')
       return
     }
 
     try {
-      const data = await apiRegister(username.trim(), password.trim())
+      const data = await apiRegister(email.trim(), username.trim(), password)
       localStorage.setItem(STORAGE_KEYS.authUser, data.username)
       localStorage.setItem(STORAGE_KEYS.sessionToken, data.token)
       localStorage.setItem(STORAGE_KEYS.userId, String(data.userId))
       setUsername(data.username)
       setAuthStage('home')
       setStatusMessage(`Registro exitoso. Bienvenido ${data.username}`)
+      setEmail('')
       setPassword('')
 
       const me = await apiMe(data.token)
@@ -150,6 +154,7 @@ export function useSession({ setStatusMessage }) {
     setRoomCode('')
     setRoomDbId('')
     setUsername('')
+    setEmail('')
     setPassword('')
     setShowCreateRoomModal(false)
     setRoomName('')
@@ -252,6 +257,8 @@ export function useSession({ setStatusMessage }) {
     inRoom: stage === 'dashboard',
     username,
     setUsername,
+    email,
+    setEmail,
     password,
     setPassword,
     roomCode,

@@ -1,7 +1,9 @@
 export function AuthScreen({
   authMode,
+  email,
   username,
   password,
+  onEmailChange,
   onUsernameChange,
   onPasswordChange,
   onToggleMode,
@@ -26,19 +28,35 @@ export function AuthScreen({
         </div>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block text-sm text-slate-300">
-            Usuario
+            Correo
             <input
-              value={username}
-              onChange={(event) => onUsernameChange(event.target.value)}
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => onEmailChange(event.target.value)}
               className="mt-2 w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/80 focus:ring-2 focus:ring-emerald-500/20"
-              placeholder="Tu nombre de usuario"
+              placeholder="tu@correo.com"
             />
           </label>
+
+          {/* El usuario solo se pide al registrarse: es el nombre que ven los demás */}
+          {!isSignin && (
+            <label className="block text-sm text-slate-300">
+              Usuario
+              <input
+                value={username}
+                onChange={(event) => onUsernameChange(event.target.value)}
+                className="mt-2 w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/80 focus:ring-2 focus:ring-emerald-500/20"
+                placeholder="Así te verán en la sala"
+              />
+            </label>
+          )}
 
           <label className="block text-sm text-slate-300">
             Contraseña
             <input
               type="password"
+              autoComplete={isSignin ? 'current-password' : 'new-password'}
               value={password}
               onChange={(event) => onPasswordChange(event.target.value)}
               className="mt-2 w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/80 focus:ring-2 focus:ring-emerald-500/20"

@@ -4,6 +4,7 @@ import com.gymstream.gymstream_api.room.Room;
 import com.gymstream.gymstream_api.room.RoomRepository;
 import com.gymstream.gymstream_api.room.RoomService;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,34 +38,102 @@ class AppUserServiceTest {
 
     @Test
     void registerStoresHashedPasswordInsteadOfPlainText() {
-        when(userRepository.existsByUsername("stella")).thenReturn(false);
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AppUser user = userService.register("stella", "gym1234");
+        AppUser user = userService.register("stella@gmail.com", "stella", "gym12345");
 
-        assertNotEquals("gym1234", user.getPassword());
+        assertNotEquals("gym12345", user.getPassword());
         assertTrue(user.getPassword().startsWith("$2"));
-        assertTrue(passwordEncoder.matches("gym1234", user.getPassword()));
+        assertTrue(passwordEncoder.matches("gym12345", user.getPassword()));
+    }
+
+    @Test
+    void registerNormalizesEmail() {
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser user = userService.register("  Stella@Gmail.COM ", "stella", "gym12345");
+
+        assertEquals("stella@gmail.com", user.getEmail());
+    }
+
+    @Test
+    void registerRejectsDuplicateEmailIgnoringCase() {
+        when(userRepository.existsByEmail("stella@gmail.com")).thenReturn(true);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.register("STELLA@gmail.com", "otra", "gym12345"));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+
+    @Test
+    void registerRejectsPasswordOverBcryptByteLimit() {
+        // 19 emojis: 38 caracteres de Java pero 76 bytes en UTF-8
+        String password = "\uD83D\uDE00".repeat(19);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.register("stella@gmail.com", "stella", password));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(userRepository, never()).save(any(AppUser.class));
+    }
+
+    @Test
+    void registerTranslatesUniqueViolationToConflict() {
+        // Simula dos registros simultáneos: el chequeo pasa pero la base rechaza el duplicado
+        when(userRepository.save(any(AppUser.class))).thenThrow(new DataIntegrityViolationException("duplicado"));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> userService.register("stella@gmail.com", "stella", "gym12345"));
+
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
     }
 
     @Test
     void loginSucceedsWithCorrectPassword() {
         AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
-        when(userRepository.findByUsername("stella")).thenReturn(Optional.of(stored));
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(stored));
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        AppUser user = userService.login("stella", "gym1234");
+        AppUser user = userService.login("stella@gmail.com", "gym1234");
 
         assertNotNull(user.getSessionToken());
     }
 
     @Test
+    void loginWorksWithDifferentCase() {
+        AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(stored));
+        when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AppUser user = userService.login(" Stella@GMAIL.com ", "gym1234");
+
+        assertNotNull(user.getSessionToken());
+    }
+
+    @Test
+    void loginGivesSameErrorForUnknownEmailAndWrongPassword() {
+        AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(stored));
+        when(userRepository.findByEmail("nadie@gmail.com")).thenReturn(Optional.empty());
+
+        ResponseStatusException wrongPassword = assertThrows(ResponseStatusException.class,
+                () -> userService.login("stella@gmail.com", "otraClave"));
+        ResponseStatusException unknownEmail = assertThrows(ResponseStatusException.class,
+                () -> userService.login("nadie@gmail.com", "gym1234"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, unknownEmail.getStatusCode());
+        assertEquals(wrongPassword.getReason(), unknownEmail.getReason());
+    }
+
+    @Test
     void loginRejectsWrongPassword() {
         AppUser stored = userWithPassword(passwordEncoder.encode("gym1234"));
-        when(userRepository.findByUsername("stella")).thenReturn(Optional.of(stored));
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(stored));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> userService.login("stella", "otraClave"));
+                () -> userService.login("stella@gmail.com", "otraClave"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
@@ -73,10 +142,10 @@ class AppUserServiceTest {
     void loginRejectsLegacyPlainTextPassword() {
         // Sin migración: un usuario viejo con la contraseña guardada en texto plano ya no puede entrar
         AppUser stored = userWithPassword("gym1234");
-        when(userRepository.findByUsername("stella")).thenReturn(Optional.of(stored));
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(stored));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> userService.login("stella", "gym1234"));
+                () -> userService.login("stella@gmail.com", "gym1234"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
