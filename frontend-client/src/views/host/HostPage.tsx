@@ -33,10 +33,23 @@ function thumbUrl(item: { songThumb?: string; songYtId?: string }): string {
   return PLACEHOLDER_THUMB
 }
 
-// El backend solo deja avanzar o borrar canciones al owner de la sala,
-// y lo reconoce por el token de sesion que guardo el login.
-function ownerHeaders(): HeadersInit {
+// sessionStorage es propio de cada pestaña: un login en otra pestaña pisa
+// localStorage, pero no esta copia, asi el host sigue siendo el dueño.
+const HOST_TOKEN_KEY = 'jukebox_hostSessionToken'
+
+// Copia el token del login a esta pestaña la primera vez (si ya hay copia, la reusa tras un F5).
+function captureHostToken(): string | null {
+  const saved = sessionStorage.getItem(HOST_TOKEN_KEY)
+  if (saved) return saved
   const token = localStorage.getItem(STORAGE_KEYS.sessionToken)
+  if (token) sessionStorage.setItem(HOST_TOKEN_KEY, token)
+  return token
+}
+
+// El backend solo deja avanzar o borrar canciones al owner de la sala,
+// y lo reconoce por el token que esta pestaña capturo al abrirse.
+function ownerHeaders(): HeadersInit {
+  const token = sessionStorage.getItem(HOST_TOKEN_KEY)
   return token ? { 'X-Session-Token': token } : {}
 }
 
@@ -61,7 +74,7 @@ export function HostPage({ roomId }: { roomId: string }) {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [nextLoading, setNextLoading] = useState(false)
   // Sin sesion del owner en este navegador, el backend rechaza avanzar o borrar.
-  const [hasOwnerSession] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.sessionToken)))
+  const [hasOwnerSession] = useState(() => Boolean(captureHostToken()))
 
   const normalizedQueue = useMemo(
     () =>
