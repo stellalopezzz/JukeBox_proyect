@@ -17,8 +17,8 @@ public class AppUserController {
     }
 
     @PostMapping("/rooms/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest request) {
-        AppUser user = userService.login(request.username(), request.password());
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+        AppUser user = userService.login(request.email(), request.password());
 
         return ResponseEntity.ok(Map.of(
                 "token", user.getSessionToken(),
@@ -29,7 +29,7 @@ public class AppUserController {
 
     @PostMapping("/rooms/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
-        AppUser user = userService.register(request.username(), request.password());
+        AppUser user = userService.register(request.email(), request.username(), request.password());
 
         return ResponseEntity.ok(Map.of(
                 "token", user.getSessionToken(),

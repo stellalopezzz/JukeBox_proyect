@@ -49,8 +49,10 @@ function App() {
     screen = (
       <AuthScreen
         authMode={session.authMode}
+        email={session.email}
         username={session.username}
         password={session.password}
+        onEmailChange={session.setEmail}
         onUsernameChange={session.setUsername}
         onPasswordChange={session.setPassword}
         onToggleMode={session.toggleAuthMode}

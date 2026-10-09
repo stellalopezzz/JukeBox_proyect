@@ -3,6 +3,7 @@ package com.gymstream.gymstream_api.user;
 import com.gymstream.gymstream_api.room.Room;
 import com.gymstream.gymstream_api.room.RoomRepository;
 import com.gymstream.gymstream_api.room.RoomService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -30,17 +32,24 @@ public class AppUserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-   
-    public AppUser login(String username, String password) {
-        if (username == null || username.trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username requerido");
+    // PostgreSQL distingue mayúsculas: sin esto "Ana@x.com" y "ana@x.com" serían dos cuentas.
+    // Locale.ROOT da el mismo resultado sin importar el idioma del servidor.
+    static String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    public AppUser login(String email, String password) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo requerido");
         }
-        if (password == null || password.trim().isEmpty()) {
+        if (password == null || password.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password requerido");
         }
 
-    Optional<AppUser> userOpt = userRepository.findByUsername(username.trim());
+        Optional<AppUser> userOpt = userRepository.findByEmail(normalizeEmail(email));
 
+        // Mismo mensaje si el correo no existe o si la contraseña está mal,
+        // para no revelar qué correos tienen cuenta
         AppUser user = userOpt.orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"));
 
@@ -53,31 +62,45 @@ public class AppUserService {
         return userRepository.save(user);
     }
 
-    public AppUser register(String username, String password) {
+    public AppUser register(String email, String username, String password) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo requerido");
+        }
         if (username == null || username.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username requerido");
         }
-        if (password == null || password.trim().isEmpty()) {
+        if (password == null || password.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password requerido");
         }
 
+        String normalizedEmail = normalizeEmail(email);
         String trimmedUsername = username.trim();
         if (trimmedUsername.length() < 3 || trimmedUsername.length() > 50) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El username debe tener entre 3 y 50 caracteres");
         }
-        if (password.length() < 4 || password.length() > 15) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password debe tener entre 4 y 15 caracteres");
+        if (password.length() < 8 || password.length() > 64) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password debe tener entre 8 y 64 caracteres");
         }
 
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese correo ya esta registrado");
+        }
         if (userRepository.existsByUsername(trimmedUsername)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El username ya esta en uso");
         }
 
         AppUser user = new AppUser();
+        user.setEmail(normalizedEmail);
         user.setUsername(trimmedUsername);
         user.setPassword(passwordEncoder.encode(password));
         user.setSessionToken(UUID.randomUUID().toString());
-        return userRepository.save(user);
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException e) {
+            // Dos registros al mismo tiempo pueden pasar los chequeos de arriba;
+            // la restricción UNIQUE de la base frena al segundo
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese correo o username ya esta en uso");
+        }
     }
 
     // Une a la sala al usuario que hizo login (el dueño del token).
