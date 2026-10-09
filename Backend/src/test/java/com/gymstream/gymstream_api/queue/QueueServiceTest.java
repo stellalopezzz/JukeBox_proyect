@@ -9,16 +9,23 @@ import com.gymstream.gymstream_api.user.AppUser;
 import com.gymstream.gymstream_api.vote.Vote;
 import com.gymstream.gymstream_api.vote.VoteRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class QueueServiceTest {
@@ -125,6 +132,47 @@ class QueueServiceTest {
 
         assertEquals(15L, item.getId());
         assertEquals(1, item.getVotesCount());
+    }
+
+    @Test
+    void addToQueueRejectsFourthPendingSongFromSameUser() {
+        Room room = room(1L);
+        AppUser user = user(7L, room);
+        Song song = song("yt-4", "Song D", "Artist D");
+
+        when(roomRepository.findById(1L)).thenReturn(Optional.of(room));
+        when(songRepository.findByYoutubeId("yt-4")).thenReturn(Optional.of(song));
+        when(cooldownRepository.findByRoomIdAndIdentifierAndTypeAndExpiresAtAfter(any(), any(), any(), any()))
+                .thenReturn(Optional.empty());
+        when(queueRepository.findWithLockByRoomIdAndSongIdAndStatus(1L, song.getId(), QueueItem.QueueStatus.PENDING))
+                .thenReturn(Optional.empty());
+        // El usuario ya tiene 3 canciones esperando en la cola
+        when(queueRepository.countByRoomIdAndAddedByIdAndStatus(1L, 7L, QueueItem.QueueStatus.PENDING))
+                .thenReturn(3L);
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> queueService.addToQueue("yt-4", "Song D", "Artist D", "thumb", 1L, user));
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, error.getStatusCode());
+        verify(queueRepository, never()).save(any(QueueItem.class));
+    }
+
+    @Test
+    void voteChecksRecentVotesFromTheLastSixtySeconds() {
+        Room room = room(1L);
+        QueueItem item = queueItem(10L, room, song("yt-1", "Song A", "Artist A"), 1);
+        AppUser user = user(7L, room);
+
+        when(queueRepository.findWithLockById(10L)).thenReturn(Optional.of(item));
+        when(voteRepository.existsRecentVoteByUserInRoom(any(), any(), any())).thenReturn(true);
+
+        assertThrows(ResponseStatusException.class, () -> queueService.vote(10L, user));
+
+        // Revisamos desde qué momento se buscaron votos recientes: tiene que ser hace ~60 segundos
+        ArgumentCaptor<LocalDateTime> since = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(voteRepository).existsRecentVoteByUserInRoom(eq(7L), eq(1L), since.capture());
+        long segundos = Duration.between(since.getValue(), LocalDateTime.now()).getSeconds();
+        assertTrue(segundos >= 59 && segundos <= 61);
     }
 
     private Room room(Long id) {

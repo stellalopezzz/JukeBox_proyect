@@ -29,6 +29,11 @@ public class QueueService {
     private final RoomRepository roomRepository;
     private final CooldownRepository cooldownRepository;
 
+    // Cuántas canciones pendientes puede tener cada usuario en la cola a la vez
+    static final int MAX_CANCIONES_PENDIENTES_POR_USUARIO = 3;
+    // Cuánto tiene que esperar un usuario entre un voto y el siguiente
+    static final int SEGUNDOS_ENTRE_VOTOS = 60;
+
     public QueueService(
             QueueRepository queueRepository,
             VoteRepository voteRepository,
@@ -91,6 +96,16 @@ public class QueueService {
             return queueRepository.save(item);
         }
 
+        // Solo se controla al crear una canción nueva: sumarse a una que ya está es un voto
+        long pendientesDelUsuario = queueRepository.countByRoomIdAndAddedByIdAndStatus(
+                roomId, user.getId(), QueueItem.QueueStatus.PENDING);
+        if (pendientesDelUsuario >= MAX_CANCIONES_PENDIENTES_POR_USUARIO) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Ya tenes " + MAX_CANCIONES_PENDIENTES_POR_USUARIO
+                            + " canciones en la cola. Espera a que suene una para agregar otra");
+        }
+
         QueueItem newItem = new QueueItem();
         newItem.setRoom(room);
         newItem.setSong(song);
@@ -143,14 +158,14 @@ public class QueueService {
                         HttpStatus.NOT_FOUND, "Cancion no encontrada en la cola"));
         ensureUserBelongsToRoom(user, item.getRoom().getId());
 
-        LocalDateTime tresMinutosAtras = LocalDateTime.now().minusMinutes(3);
+        LocalDateTime inicioDeEspera = LocalDateTime.now().minusSeconds(SEGUNDOS_ENTRE_VOTOS);
         boolean votoReciente = voteRepository
-                .existsRecentVoteByUserInRoom(user.getId(), item.getRoom().getId(), tresMinutosAtras);
+                .existsRecentVoteByUserInRoom(user.getId(), item.getRoom().getId(), inicioDeEspera);
 
         if (votoReciente) {
             throw new ResponseStatusException(
                     HttpStatus.TOO_MANY_REQUESTS,
-                    "Debes esperar un momento antes de votar otra cancion");
+                    "Debes esperar " + SEGUNDOS_ENTRE_VOTOS + " segundos entre un voto y el siguiente");
         }
 
         addVoteOrReject(item, user);
