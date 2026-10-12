@@ -76,3 +76,4 @@ Login con correo, por fases. La fase 0 (exigir el token de sesión para entrar a
 - QueueItem relaciona Room, Song y AppUser.
 - Vote relaciona QueueItem y AppUser.
 - El realtime está separado del backend Spring Boot.
+- El esquema de la base se maneja con migraciones de Flyway (`Backend/src/main/resources/db/migration/`), no con `ddl-auto=update`.
