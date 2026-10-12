@@ -201,10 +201,8 @@ export function useYouTubeIFramePlayer({ videoId, autoplay = true, onEnded }: Us
     try {
       setCurrentTimeSec(0)
       p.loadVideoById?.(videoId)
-      if (autoplay) {
-        p.mute?.()
-        p.playVideo?.()
-      }
+      // Sin mute(): el player recuerda si el host ya activó el sonido
+      if (autoplay) p.playVideo?.()
     } catch {
       // ignore
     }
