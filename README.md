@@ -58,6 +58,8 @@ Asegúrate de que las dependencias estén instaladas primero con `./setup-all.ps
 
 ### Backend
 
+Antes del primer arranque, copiá `Backend/src/main/resources/application.properties.example` como `application.properties` en la misma carpeta y completá tus claves.
+
 ```powershell
 cd Backend
 ./mvnw spring-boot:run
