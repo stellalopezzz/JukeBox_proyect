@@ -45,6 +45,19 @@ class PasswordResetServiceTest {
     }
 
     @Test
+    void requestDoesNotSendAnotherMailDuringTheCooldown() {
+        AppUser user = user();
+        when(userRepository.findByEmail("stella@gmail.com")).thenReturn(Optional.of(user));
+        when(tokenService.createdWithin(user, EmailTokenType.RESET_PASSWORD,
+                PasswordResetService.TOKEN_LIFETIME, PasswordResetService.REQUEST_COOLDOWN)).thenReturn(true);
+
+        service.requestReset("stella@gmail.com");
+
+        verify(tokenService, never()).create(any(), any(), any());
+        verifyNoInteractions(mailService);
+    }
+
+    @Test
     void requestDoesNothingForAnUnknownEmail() {
         when(userRepository.findByEmail(any())).thenReturn(Optional.empty());
 
@@ -56,10 +69,12 @@ class PasswordResetServiceTest {
     @Test
     void resetChangesThePasswordAndClosesTheSession() {
         AppUser user = user();
+        when(tokenService.findOwner("abc", EmailTokenType.RESET_PASSWORD)).thenReturn(user);
         when(tokenService.consume("abc", EmailTokenType.RESET_PASSWORD)).thenReturn(user);
 
         service.resetPassword("abc", "nueva-clave-123");
 
+        verify(userRepository).lockById(user.getId());
         assertTrue(passwordEncoder.matches("nueva-clave-123", user.getPassword()));
         assertNull(user.getSessionToken());
         assertTrue(user.getEmailVerified());

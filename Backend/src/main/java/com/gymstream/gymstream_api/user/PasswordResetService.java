@@ -14,6 +14,9 @@ public class PasswordResetService {
 
     // Más corto que el de verificación: este enlace da acceso a la cuenta
     static final Duration TOKEN_LIFETIME = Duration.ofHours(1);
+    // Tiempo mínimo entre dos correos de recuperación para la misma cuenta,
+    // para que nadie pueda llenarle la casilla a otra persona
+    static final Duration REQUEST_COOLDOWN = Duration.ofMinutes(2);
 
     private final EmailTokenService tokenService;
     private final AppUserRepository userRepository;
@@ -39,6 +42,9 @@ public class PasswordResetService {
             return;
         }
         userRepository.findByEmail(AppUserService.normalizeEmail(email)).ifPresent(user -> {
+            if (tokenService.createdWithin(user, EmailTokenType.RESET_PASSWORD, TOKEN_LIFETIME, REQUEST_COOLDOWN)) {
+                return;
+            }
             String rawToken = tokenService.create(user, EmailTokenType.RESET_PASSWORD, TOKEN_LIFETIME);
             String link = frontendUrl + "/restablecer?token=" + rawToken;
             mailService.send(user.getEmail(), "Recupera tu contraseña de JukeBox",
@@ -53,6 +59,10 @@ public class PasswordResetService {
     public void resetPassword(String rawToken, String newPassword) {
         // Se valida antes de usar el token, para que una contraseña inválida no gaste el enlace
         AppUserService.validatePassword(newPassword);
+        // Bloquea al usuario antes de tocar sus tokens: si llegan dos enlaces suyos a la vez,
+        // el segundo espera y después encuentra su enlace anulado, en vez de trabarse con el primero
+        AppUser owner = tokenService.findOwner(rawToken, EmailTokenType.RESET_PASSWORD);
+        userRepository.lockById(owner.getId());
         AppUser user = tokenService.consume(rawToken, EmailTokenType.RESET_PASSWORD);
         // Si pidió varios enlaces, los demás dejan de servir
         tokenService.invalidateAll(user, EmailTokenType.RESET_PASSWORD);

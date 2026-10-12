@@ -45,23 +45,39 @@ public class EmailTokenService {
         return rawToken;
     }
 
+    // Comprueba el token y devuelve a su dueño, sin marcarlo como usado
+    public AppUser findOwner(String rawToken, EmailTokenType type) {
+        return findValid(rawToken, type).getUser();
+    }
+
     // Comprueba el token, lo marca como usado y devuelve a su dueño
     @Transactional
     public AppUser consume(String rawToken, EmailTokenType type) {
+        EmailToken token = findValid(rawToken, type);
+        // Si dos pedidos llegan a la vez con el mismo enlace, solo uno logra marcarlo
+        if (tokenRepository.markUsed(token.getId(), Instant.now(clock)) == 0) {
+            throw invalidLink();
+        }
+        return token.getUser();
+    }
+
+    // true si se creó un token de ese tipo hace menos de "window".
+    // No guardamos la fecha de creación, pero es expiresAt - lifetime.
+    public boolean createdWithin(AppUser user, EmailTokenType type, Duration lifetime, Duration window) {
+        Instant limit = Instant.now(clock).plus(lifetime).minus(window);
+        return tokenRepository.existsByUserAndTypeAndExpiresAtAfter(user, type, limit);
+    }
+
+    private EmailToken findValid(String rawToken, EmailTokenType type) {
         if (rawToken == null || rawToken.isBlank()) {
             throw invalidLink();
         }
         EmailToken token = tokenRepository.findByTokenHashAndType(hash(rawToken.trim()), type)
                 .orElseThrow(this::invalidLink);
-        Instant now = Instant.now(clock);
-        if (token.getUsedAt() != null || now.isAfter(token.getExpiresAt())) {
+        if (token.getUsedAt() != null || Instant.now(clock).isAfter(token.getExpiresAt())) {
             throw invalidLink();
         }
-        // Si dos pedidos llegan a la vez con el mismo enlace, solo uno logra marcarlo
-        if (tokenRepository.markUsed(token.getId(), now) == 0) {
-            throw invalidLink();
-        }
-        return token.getUser();
+        return token;
     }
 
     // Anula los enlaces de ese tipo que el usuario todavía no usó

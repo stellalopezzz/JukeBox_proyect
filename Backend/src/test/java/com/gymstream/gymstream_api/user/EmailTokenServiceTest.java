@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -81,6 +82,16 @@ class EmailTokenServiceTest {
         when(tokenRepository.findByTokenHashAndType(any(), any())).thenReturn(Optional.empty());
 
         assertInvalid("inventado");
+    }
+
+    @Test
+    void createdWithinLooksForTokensCreatedInsideTheWindow() {
+        AppUser user = new AppUser();
+        // Un token de 1 hora creado hace menos de 2 minutos vence después de ahora + 58 minutos
+        when(tokenRepository.existsByUserAndTypeAndExpiresAtAfter(user, EmailTokenType.RESET_PASSWORD, NOW.plus(Duration.ofMinutes(58))))
+                .thenReturn(true);
+
+        assertTrue(service.createdWithin(user, EmailTokenType.RESET_PASSWORD, Duration.ofHours(1), Duration.ofMinutes(2)));
     }
 
     private void assertInvalid(String rawToken) {
