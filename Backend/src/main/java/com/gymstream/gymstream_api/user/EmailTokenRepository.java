@@ -11,9 +11,15 @@ import java.util.Optional;
 public interface EmailTokenRepository extends JpaRepository<EmailToken, Long> {
     Optional<EmailToken> findByTokenHashAndType(String tokenHash, EmailTokenType type);
 
+    boolean existsByUserAndTypeAndExpiresAtAfter(AppUser user, EmailTokenType type, Instant expiresAt);
+
     // Marca el token como usado solo si nadie lo uso antes, en un solo UPDATE.
     // Devuelve cuantas filas cambio: 0 significa que otro pedido lo uso primero.
     @Modifying
     @Query("update EmailToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")
     int markUsed(@Param("id") Long id, @Param("now") Instant now);
+
+    @Modifying
+    @Query("update EmailToken t set t.usedAt = :now where t.user = :user and t.type = :type and t.usedAt is null")
+    int markAllUsed(@Param("user") AppUser user, @Param("type") EmailTokenType type, @Param("now") Instant now);
 }

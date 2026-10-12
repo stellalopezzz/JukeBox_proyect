@@ -12,10 +12,13 @@ public class AppUserController {
 
     private final AppUserService userService;
     private final EmailVerificationService emailVerificationService;
+    private final PasswordResetService passwordResetService;
 
-    public AppUserController(AppUserService userService, EmailVerificationService emailVerificationService) {
+    public AppUserController(AppUserService userService, EmailVerificationService emailVerificationService,
+                             PasswordResetService passwordResetService) {
         this.userService = userService;
         this.emailVerificationService = emailVerificationService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/rooms/login")
@@ -66,6 +69,20 @@ public class AppUserController {
     public ResponseEntity<Map<String, Object>> resendVerification(@RequestHeader("X-Session-Token") String sessionToken) {
         AppUser user = userService.getUserBySessionToken(sessionToken);
         emailVerificationService.resend(user);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    // Siempre responde lo mismo, exista o no el correo
+    @PostMapping("/users/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestReset(request.email());
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    // Lo llama la página /restablecer con el token del enlace y la contraseña nueva
+    @PostMapping("/users/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.password());
         return ResponseEntity.ok(Map.of("success", true));
     }
 

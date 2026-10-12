@@ -149,3 +149,29 @@ export async function apiResendVerification(sessionToken: string) {
   }
   return res.json();
 }
+
+export async function apiForgotPassword(email: string) {
+  const res = await fetch(`${API_URL}/users/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message || "No se pudo enviar el correo");
+  }
+  return res.json();
+}
+
+export async function apiResetPassword(token: string, password: string) {
+  const res = await fetch(`${API_URL}/users/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message || "No se pudo cambiar la contraseña");
+  }
+  return res.json();
+}
