@@ -1,0 +1,35 @@
+# Plantilla de configuración del backend.
+# Copiala como application.properties (en esta misma carpeta) y completá tus valores.
+# application.properties está en .gitignore: ahí van las claves reales, este archivo no.
+# ${VARIABLE:valor} lee esa variable de entorno; si no existe, usa lo que va después de ":".
+
+spring.application.name=gymstream-api
+
+# Base de datos PostgreSQL (los valores por defecto son los de docker-compose.yml)
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/jukebox}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:jukebox}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:jukebox}
+
+# Flyway crea y cambia las tablas; Hibernate solo comprueba que coincidan con las @Entity
+spring.jpa.hibernate.ddl-auto=validate
+# Adopta una base creada antes de Flyway. En una base vacía no hace nada.
+# Con una base vieja, el primer arranque va con ddl-auto=update y después se vuelve a validate
+# (ver CLAUDE.md, sección "Base de datos").
+spring.flyway.baseline-on-migrate=true
+
+# Clave de la API de YouTube Data v3. Es obligatoria: sin ella el backend no arranca.
+youtube.api.key=${YOUTUBE_API_KEY}
+
+# Aviso al realtime-service. La clave tiene que ser igual a INTERNAL_API_KEY de realtime-service/.env
+realtime.service.url=http://localhost:3000
+realtime.api.key=${INTERNAL_API_KEY:}
+realtime.enabled=true
+
+# Correo. Sin spring.mail.host los correos se imprimen en la consola del backend.
+# Descomentá estas dos líneas para mandarlos a Mailpit (se ven en http://localhost:8025).
+#spring.mail.host=localhost
+#spring.mail.port=1025
+app.mail.from=no-reply@jukebox.local
+
+# Base de los enlaces que van en los correos (verificar correo, recuperar contraseña)
+app.frontend-url=http://localhost:5173

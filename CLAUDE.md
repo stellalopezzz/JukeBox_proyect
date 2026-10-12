@@ -67,7 +67,7 @@ Las tablas las crea y cambia **Flyway** al arrancar el backend, con los archivos
 
 ### Backend (Java 21 + Spring Boot + Maven, puerto 8080)
 
-Requiere variables de entorno antes de arrancar: `SPRING_DATASOURCE_URL` (por ejemplo `jdbc:postgresql://localhost:5432/jukebox`), `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (PostgreSQL; con el `docker-compose.yml` son `jukebox` / `jukebox`), `YOUTUBE_API_KEY`, y opcionalmente `INTERNAL_API_KEY` (si no está seteada, el backend simplemente no notifica al realtime-service). Para que mande correos de verdad a Mailpit: `SPRING_MAIL_HOST=localhost` y `SPRING_MAIL_PORT=1025`; si no se setean, el correo se imprime en la consola del backend. `APP_FRONTEND_URL` (por defecto `http://localhost:5173`) es la base del enlace que va en el correo.
+La configuración va en `Backend/src/main/resources/application.properties`, que está en `.gitignore`; `application.properties.example`, en la misma carpeta, es la plantilla con todas las propiedades para copiar. Requiere variables de entorno antes de arrancar: `SPRING_DATASOURCE_URL` (por ejemplo `jdbc:postgresql://localhost:5432/jukebox`), `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` (PostgreSQL; con el `docker-compose.yml` son `jukebox` / `jukebox`), `YOUTUBE_API_KEY`, y opcionalmente `INTERNAL_API_KEY` (si no está seteada, el backend simplemente no notifica al realtime-service). Para que mande correos de verdad a Mailpit: `SPRING_MAIL_HOST=localhost` y `SPRING_MAIL_PORT=1025`; si no se setean, el correo se imprime en la consola del backend. `APP_FRONTEND_URL` (por defecto `http://localhost:5173`) es la base del enlace que va en el correo.
 
 ```powershell
 cd Backend
