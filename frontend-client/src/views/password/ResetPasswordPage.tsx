@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { apiResetPassword } from '../../api/api'
 import { clearStoredSession } from '../../shared/storage'
+import { PasswordInput } from '../../shared/PasswordInput'
 
 // Pagina /restablecer?token=...: a donde lleva el enlace del correo para elegir la contraseña nueva.
 export function ResetPasswordPage() {
@@ -48,21 +49,19 @@ export function ResetPasswordPage() {
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <label className="block text-sm text-slate-300">
               Contraseña nueva
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={setPassword}
                 className={inputClass}
               />
             </label>
             <label className="block text-sm text-slate-300">
               Repite la contraseña
-              <input
-                type="password"
+              <PasswordInput
                 autoComplete="new-password"
                 value={confirm}
-                onChange={(event) => setConfirm(event.target.value)}
+                onChange={setConfirm}
                 className={inputClass}
               />
             </label>

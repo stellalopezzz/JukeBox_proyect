@@ -1,3 +1,5 @@
+import { PasswordInput } from '../../../shared/PasswordInput'
+
 export function AuthScreen({
   authMode,
   email,
@@ -54,11 +56,10 @@ export function AuthScreen({
 
           <label className="block text-sm text-slate-300">
             Contraseña
-            <input
-              type="password"
+            <PasswordInput
               autoComplete={isSignin ? 'current-password' : 'new-password'}
               value={password}
-              onChange={(event) => onPasswordChange(event.target.value)}
+              onChange={onPasswordChange}
               className="mt-2 w-full rounded-3xl border border-slate-800 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400/80 focus:ring-2 focus:ring-emerald-500/20"
               placeholder="Tu contraseña"
             />
