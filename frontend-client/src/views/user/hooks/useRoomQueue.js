@@ -79,6 +79,7 @@ export function useRoomQueue({ inRoom, roomDbId, username, setStatusMessage }) {
         title: song.title,
         artist: song.artist,
         thumb: song.thumbnail,
+        durationSeconds: song.durationSeconds,
       })
       await fetchQueue()
       setStatusMessage('Cancion enviada a la cola.')

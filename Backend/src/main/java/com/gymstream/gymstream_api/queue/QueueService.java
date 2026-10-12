@@ -49,7 +49,7 @@ public class QueueService {
 
     @Transactional
     public QueueItem addToQueue(String ytId, String title, String artist,
-                                String thumb, Long roomId, AppUser user) {
+                                String thumb, Integer durationSeconds, Long roomId, AppUser user) {
 
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -63,8 +63,15 @@ public class QueueService {
                     newSong.setTitle(title);
                     newSong.setArtist(artist);
                     newSong.setThumbnailUrl(thumb);
+                    newSong.setDurationSeconds(durationSeconds);
                     return songRepository.save(newSong);
                 });
+
+        // Las canciones guardadas antes de tener este dato se completan al volver a agregarlas
+        if (song.getDurationSeconds() == null && durationSeconds != null) {
+            song.setDurationSeconds(durationSeconds);
+            songRepository.save(song);
+        }
 
         Optional<Cooldown> cooldownActivo = cooldownRepository
                 .findByRoomIdAndIdentifierAndTypeAndExpiresAtAfter(

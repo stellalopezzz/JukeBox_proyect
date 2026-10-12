@@ -97,6 +97,7 @@ type AddToQueueRequest = {
   title: string;
   artist: string;
   thumb: string;
+  durationSeconds?: number;
 };
 
 export async function apiAddToQueue(sessionToken: string, item: AddToQueueRequest) {

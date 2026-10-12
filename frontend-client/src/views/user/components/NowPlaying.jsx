@@ -1,4 +1,4 @@
-import { thumbUrl } from '../../../shared/queueItem'
+import { formatDuration, thumbUrl } from '../../../shared/queueItem'
 
 export function NowPlaying({ nowPlaying, queueLength }) {
   return (
@@ -25,7 +25,9 @@ export function NowPlaying({ nowPlaying, queueLength }) {
               <div>
                 <p className="text-sm uppercase tracking-[0.24em] text-emerald-300">Ahora suena</p>
                 <h3 className="mt-2 text-xl font-semibold text-white">{nowPlaying.songTitle}</h3>
-                <p className="mt-1 text-sm text-slate-400">{nowPlaying.songArtist}</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  {nowPlaying.songArtist} · {formatDuration(nowPlaying.durationSeconds)}
+                </p>
               </div>
             </div>
             <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-200">

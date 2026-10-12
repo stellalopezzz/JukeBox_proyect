@@ -39,6 +39,7 @@ public class QueueController {
                 request.title(),
                 request.artist(),
                 request.thumb(),
+                request.durationSeconds(),
                 request.roomId(),
                 user
         );
