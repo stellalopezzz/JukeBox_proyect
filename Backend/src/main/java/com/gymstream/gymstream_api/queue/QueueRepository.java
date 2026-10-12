@@ -20,6 +20,10 @@ public interface QueueRepository extends JpaRepository<QueueItem, Long> {
         Long roomId, Long songId, QueueItem.QueueStatus status
     );
 
+    // Cuenta cuántas canciones agregó un usuario en una sala con cierto status
+    // SELECT COUNT(*) FROM queue WHERE room_id = ? AND added_by_user_id = ? AND status = ?
+    long countByRoomIdAndAddedByIdAndStatus(Long roomId, Long userId, QueueItem.QueueStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<QueueItem> findWithLockById(Long id);
 
