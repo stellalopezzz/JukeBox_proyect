@@ -128,10 +128,11 @@ class QueueServiceTest {
         when(voteRepository.save(any(Vote.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(voteRepository.countByQueueItemId(15L)).thenReturn(1);
 
-        QueueItem item = queueService.addToQueue("yt-1", "Song A", "Artist A", "thumb", 1L, user);
+        QueueItem item = queueService.addToQueue("yt-1", "Song A", "Artist A", "thumb", 225, 1L, user);
 
         assertEquals(15L, item.getId());
         assertEquals(1, item.getVotesCount());
+        assertEquals(225, item.getSong().getDurationSeconds());
     }
 
     @Test
@@ -151,7 +152,7 @@ class QueueServiceTest {
                 .thenReturn(3L);
 
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
-                () -> queueService.addToQueue("yt-4", "Song D", "Artist D", "thumb", 1L, user));
+                () -> queueService.addToQueue("yt-4", "Song D", "Artist D", "thumb", 225, 1L, user));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, error.getStatusCode());
         verify(queueRepository, never()).save(any(QueueItem.class));

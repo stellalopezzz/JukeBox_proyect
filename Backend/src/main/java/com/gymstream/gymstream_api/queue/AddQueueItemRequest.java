@@ -15,6 +15,9 @@ public record AddQueueItemRequest(
 
         String artist,
 
-        String thumb
+        String thumb,
+
+        // Puede venir vacío: las canciones viejas no la tienen
+        Integer durationSeconds
 ) {
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useYouTubeIFramePlayer } from './hooks/useYouTubeIFramePlayer'
 import { STORAGE_KEYS } from '../../shared/storage'
+import { formatDuration } from '../../shared/queueItem'
 
 const SERVER_BASE = 'http://localhost:8080/api'
 const SOCKET_URL = 'http://localhost:3000'
@@ -18,6 +19,7 @@ type QueueItem = {
   artist?: string
   ytId?: string
   thumbnail?: string
+  durationSeconds?: number | null
   votes?: number
   status?: string
   score?: number
@@ -376,7 +378,9 @@ export function HostPage({ roomId }: { roomId: string }) {
                   <p className="text-sm uppercase tracking-[0.32em] text-emerald-400">Ahora suena</p>
                   <h2 className="mt-2 text-2xl font-semibold text-white">{nowPlaying?.songTitle || 'Sin reproducción'}</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    {nowPlaying?.songArtist || (nowPlaying ? 'Artista desconocido' : 'La cola está vacía')}
+                    {nowPlaying
+                      ? `${nowPlaying.songArtist} · ${formatDuration(nowPlaying.durationSeconds)}`
+                      : 'La cola está vacía'}
                   </p>
                 </div>
                 {nowPlaying ? (
@@ -408,7 +412,9 @@ export function HostPage({ roomId }: { roomId: string }) {
                     />
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-slate-100">{nextSong.songTitle}</p>
-                      <p className="mt-1 truncate text-sm text-slate-400">{nextSong.songArtist}</p>
+                      <p className="mt-1 truncate text-sm text-slate-400">
+                        {nextSong.songArtist} · {formatDuration(nextSong.durationSeconds)}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -443,7 +449,9 @@ export function HostPage({ roomId }: { roomId: string }) {
                           />
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-semibold text-slate-100">{song.songTitle || 'Sin título'}</p>
-                            <p className="mt-1 truncate text-sm text-slate-400">{song.songArtist || 'Artista desconocido'}</p>
+                            <p className="mt-1 truncate text-sm text-slate-400">
+                              {song.songArtist} · {formatDuration(song.durationSeconds)}
+                            </p>
                             <div className="mt-3 flex items-center justify-between gap-2">
                               <span className="text-sm font-semibold text-emerald-300">{song.votesCount ?? 0} votos</span>
                               {qid != null ? (

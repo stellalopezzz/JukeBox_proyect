@@ -10,4 +10,5 @@ public class SongSearchResult {
     private String title;      
     private String artist;     
     private String thumb;     
+    private Integer durationSeconds; // duración en segundos, para mostrarla en la cola
 }

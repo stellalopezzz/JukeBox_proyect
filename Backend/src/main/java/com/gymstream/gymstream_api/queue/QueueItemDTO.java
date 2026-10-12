@@ -10,6 +10,7 @@ public class QueueItemDTO {
     private String artist;     // antes: songArtist
     private String ytId;       // antes: songYtId
     private String thumbnail;  // antes: songThumb
+    private Integer durationSeconds; // null si la canción se guardó antes de existir este dato
     private Integer votes;     // antes: votesCount
     private String status;
     private Double score;
@@ -22,6 +23,7 @@ public class QueueItemDTO {
             this.artist = item.getSong().getArtist();
             this.ytId = item.getSong().getYoutubeId();
             this.thumbnail = item.getSong().getThumbnailUrl();
+            this.durationSeconds = item.getSong().getDurationSeconds();
         } else {
             this.title = "Sin título";
             this.artist = "Desconocido";

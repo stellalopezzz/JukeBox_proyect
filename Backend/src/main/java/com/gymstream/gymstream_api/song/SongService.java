@@ -127,7 +127,8 @@ public class SongService {
 
                 if (isValidMusicVideo(categoryId, duration)) {
                     // Solo devolvemos ese video específico si es música y < 10 minutos
-                    results.add(new SongSearchResult(videoId, title, channelTitle, thumbnail));
+                    results.add(new SongSearchResult(videoId, title, cleanArtistName(channelTitle),
+                            thumbnail, toSeconds(duration)));
                 }
             }
 
@@ -212,7 +213,8 @@ public class SongService {
                                     .get("url")
                                     .asText();
 
-                            results.add(new SongSearchResult(videoId, title, channelTitle, thumbnail));
+                            results.add(new SongSearchResult(videoId, title, cleanArtistName(channelTitle),
+                                    thumbnail, toSeconds(duration)));
                         } catch (Exception e) {
                             System.err.println("Error al procesar detalle de video: " + e.getMessage());
                         }
@@ -242,6 +244,30 @@ public class SongService {
         } catch (DateTimeParseException ex) {
             return false;
         }
+    }
+
+    // YouTube da la duración en formato ISO 8601 ("PT3M45S"); la pasamos a segundos (225)
+    private Integer toSeconds(String durationIso8601) {
+        try {
+            return (int) Duration.parse(durationIso8601).getSeconds();
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    // El "artista" es el nombre del canal de YouTube, que suele traer agregados
+    // como "AviciiOfficialVEVO" o "Bad Bunny - Topic". Los quitamos para que se lea mejor.
+    String cleanArtistName(String channelTitle) {
+        if (channelTitle == null) {
+            return null;
+        }
+        String name = channelTitle.trim()
+                .replaceAll("(?i)\\s*-\\s*Topic$", "")
+                .replaceAll("VEVO$", "")
+                .replaceAll("(?i)\\s*(Official|Oficial)$", "")
+                .trim();
+        // Si al limpiar no queda nada (un canal llamado solo "VEVO"), dejamos el original
+        return name.isEmpty() ? channelTitle : name;
     }
 
     private void validateApiKey() {

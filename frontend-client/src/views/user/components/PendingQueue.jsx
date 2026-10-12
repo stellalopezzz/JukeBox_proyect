@@ -1,4 +1,4 @@
-import { thumbUrl } from '../../../shared/queueItem'
+import { formatDuration, thumbUrl } from '../../../shared/queueItem'
 
 export function PendingQueue({ pendingSongs, votedSongs, onVoteToggle }) {
   return (
@@ -44,7 +44,9 @@ function PendingSongCard({ song, voted, onVoteToggle }) {
           />
           <div className="min-w-0">
             <p className="font-semibold text-slate-100">{song.songTitle}</p>
-            <p className="mt-1 text-sm text-slate-400">{song.songArtist}</p>
+            <p className="mt-1 text-sm text-slate-400">
+              {song.songArtist} · {formatDuration(song.durationSeconds)}
+            </p>
           </div>
         </div>
         <div className="text-right">

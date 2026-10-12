@@ -9,6 +9,7 @@ export function normalizeQueueItem(raw) {
     songArtist: raw.songArtist ?? raw.artist ?? 'Artista desconocido',
     songYtId: raw.songYtId ?? raw.ytId ?? '',
     songThumb: raw.songThumb ?? raw.thumbnail ?? '',
+    durationSeconds: raw.durationSeconds ?? null,
     votesCount: raw.votesCount ?? raw.votes ?? 0,
     score: raw.score ?? 0,
     status: raw.status,
@@ -19,4 +20,13 @@ export function thumbUrl(item) {
   if (item.songThumb) return item.songThumb
   if (item.songYtId) return `https://img.youtube.com/vi/${item.songYtId}/hqdefault.jpg`
   return 'https://via.placeholder.com/100x60?text=Cover'
+}
+
+// Convierte segundos a "minutos:segundos" (225 -> "3:45").
+// Las canciones guardadas antes de tener este dato muestran "--:--".
+export function formatDuration(seconds) {
+  if (seconds == null) return '--:--'
+  const minutes = Math.floor(seconds / 60)
+  const rest = String(seconds % 60).padStart(2, '0')
+  return `${minutes}:${rest}`
 }
