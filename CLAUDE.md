@@ -144,4 +144,8 @@ Llama a la API de YouTube Data v3 (`search` + `videos`) usando `YOUTUBE_API_KEY`
 
 ### CORS
 
-Hardcodeado a `http://localhost:5173` en `CorsConfig.java`. Si el frontend corre en otro puerto (por ejemplo porque `start-all.ps1` eligió 5174), las requests del navegador van a fallar por CORS hasta que se actualice ahí.
+`CorsConfig.java` permite los orígenes de la propiedad `app.cors.allowed-origins` (variable `APP_CORS_ALLOWED_ORIGINS`, separados por coma; por defecto `http://localhost:5173`). Si el frontend corre en otro puerto (por ejemplo porque `start-all.ps1` eligió 5174), hay que agregarlo ahí o las requests del navegador fallan por CORS.
+
+### URLs del frontend
+
+`frontend-client/src/shared/config.js` es el único lugar con las direcciones del backend (`API_URL`, variable `VITE_API_URL`) y del realtime-service (`SOCKET_URL`, variable `VITE_SOCKET_URL`), con localhost por defecto. Vite las lee de `frontend-client/.env` al compilar; `frontend-client/.env.example` es la plantilla.

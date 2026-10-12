@@ -3,9 +3,7 @@ import { io } from 'socket.io-client'
 import { useYouTubeIFramePlayer } from './hooks/useYouTubeIFramePlayer'
 import { STORAGE_KEYS } from '../../shared/storage'
 import { formatDuration } from '../../shared/queueItem'
-
-const SERVER_BASE = 'http://localhost:8080/api'
-const SOCKET_URL = 'http://localhost:3000'
+import { API_URL, SOCKET_URL } from '../../shared/config'
 
 const PLACEHOLDER_THUMB = 'https://via.placeholder.com/320x180?text=Music'
 
@@ -56,7 +54,7 @@ function ownerHeaders(): HeadersInit {
 }
 
 async function fetchQueue(roomId: string): Promise<QueueItem[]> {
-  const response = await fetch(`${SERVER_BASE}/queue/${encodeURIComponent(roomId)}`)
+  const response = await fetch(`${API_URL}/queue/${encodeURIComponent(roomId)}`)
   if (!response.ok) return []
   const data = await response.json()
   if (Array.isArray(data)) return data
@@ -119,7 +117,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     advancingRef.current = true
     setNextLoading(true)
     try {
-      const nextResp = await fetch(`${SERVER_BASE}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
+      const nextResp = await fetch(`${API_URL}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
         method: 'PATCH',
         headers: ownerHeaders(),
       })
@@ -155,7 +153,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     const isNumericId = /^\d+$/.test(candidate)
     if (isNumericId) {
       setResolvedRoomId(candidate)
-      fetch(`${SERVER_BASE}/rooms/${encodeURIComponent(candidate)}`)
+      fetch(`${API_URL}/rooms/${encodeURIComponent(candidate)}`)
         .then(async (response) => {
           if (!response.ok) return
           const data = (await response.json()) as RoomLookupResponse
@@ -166,7 +164,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     }
 
     setStatusMessage('Resolviendo sala…')
-    fetch(`${SERVER_BASE}/rooms/${encodeURIComponent(candidate)}`)
+    fetch(`${API_URL}/rooms/${encodeURIComponent(candidate)}`)
       .then(async (response) => {
         if (!response.ok) throw new Error('Room not found')
         const data = (await response.json()) as RoomLookupResponse
@@ -250,7 +248,7 @@ export function HostPage({ roomId }: { roomId: string }) {
 
     bootstrappedRef.current = true
     advancingRef.current = true
-    fetch(`${SERVER_BASE}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
+    fetch(`${API_URL}/queue/next-track/${encodeURIComponent(resolvedRoomId)}`, {
       method: 'PATCH',
       headers: ownerHeaders(),
     })
@@ -292,7 +290,7 @@ export function HostPage({ roomId }: { roomId: string }) {
     if (deletingId != null) return
     setDeletingId(queueItemId)
     try {
-      const resp = await fetch(`${SERVER_BASE}/queue/${queueItemId}`, {
+      const resp = await fetch(`${API_URL}/queue/${queueItemId}`, {
         method: 'DELETE',
         headers: ownerHeaders(),
       })

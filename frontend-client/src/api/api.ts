@@ -1,4 +1,4 @@
-export const API_URL = "http://localhost:8080/api";
+import { API_URL } from "../shared/config";
 
 export async function apiRegister(email: string, username: string, password: string) {
   const res = await fetch(`${API_URL}/rooms/register`, {
