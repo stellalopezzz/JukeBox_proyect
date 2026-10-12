@@ -16,4 +16,8 @@ public interface EmailTokenRepository extends JpaRepository<EmailToken, Long> {
     @Modifying
     @Query("update EmailToken t set t.usedAt = :now where t.id = :id and t.usedAt is null")
     int markUsed(@Param("id") Long id, @Param("now") Instant now);
+
+    @Modifying
+    @Query("update EmailToken t set t.usedAt = :now where t.user = :user and t.type = :type and t.usedAt is null")
+    int markAllUsed(@Param("user") AppUser user, @Param("type") EmailTokenType type, @Param("now") Instant now);
 }

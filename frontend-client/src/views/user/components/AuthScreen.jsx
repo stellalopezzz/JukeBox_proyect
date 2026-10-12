@@ -64,6 +64,12 @@ export function AuthScreen({
             />
           </label>
 
+          {isSignin && (
+            <a href="/recuperar" className="block text-right text-sm text-slate-400 hover:text-emerald-200">
+              ¿Olvidaste tu contraseña?
+            </a>
+          )}
+
           <button
             type="submit"
             className="w-full rounded-3xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-950 shadow-xl shadow-cyan-500/20 transition hover:-translate-y-0.5 hover:shadow-cyan-500/30"

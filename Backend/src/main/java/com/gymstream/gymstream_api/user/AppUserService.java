@@ -42,6 +42,17 @@ public class AppUserService {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
+    // Reglas de contraseña compartidas por el registro y la recuperación de contraseña
+    static void validatePassword(String password) {
+        if (password == null || password.length() < 8 || password.length() > 64) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password debe tener entre 8 y 64 caracteres");
+        }
+        // BCrypt acepta hasta 72 bytes, y un emoji ocupa 4: 64 caracteres pueden pasarse
+        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password es demasiado largo");
+        }
+    }
+
     public AppUser login(String email, String password) {
         if (email == null || email.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Correo requerido");
@@ -82,13 +93,7 @@ public class AppUserService {
         if (trimmedUsername.length() < 3 || trimmedUsername.length() > 50) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El username debe tener entre 3 y 50 caracteres");
         }
-        if (password.length() < 8 || password.length() > 64) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password debe tener entre 8 y 64 caracteres");
-        }
-        // BCrypt acepta hasta 72 bytes, y un emoji ocupa 4: 64 caracteres pueden pasarse
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El password es demasiado largo");
-        }
+        validatePassword(password);
 
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ese correo ya esta registrado");
